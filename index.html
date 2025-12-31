@@ -3,932 +3,413 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panalix - AI Comic Generator</title>
+    <title>Panalix Pro - AI Comic Studio</title>
     
-    <!-- Tailwind CSS -->
+    <!-- ייבוא פונטים -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&family=Heebo:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- ייבוא ספריות חיצוניות -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Google Font (Assistant for Hebrew) -->
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: #f8fafc;
-        }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
-
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <!-- קישור לקובץ העיצוב שלנו -->
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="text-slate-800">
+<body class="bg-slate-50 text-slate-900 antialiased overflow-hidden">
 
-    <!-- Screen 0: Login -->
-    <div id="login-screen" class="flex flex-col items-center justify-center h-screen bg-slate-100 p-4">
-        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-            <h1 class="text-4xl font-bold text-blue-600 mb-2">Panalix</h1>
-            <p class="text-slate-500 mb-6">מחולל קומיקס מבוסס בינה מלאכותית</p>
-            
-            <div class="space-y-4 text-right">
-                <label class="block text-sm font-medium text-slate-700">Google AI Studio API Key</label>
-                <input type="password" id="api-key-input" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="הדבק כאן את המפתח שלך...">
-                <p id="login-error" class="text-red-500 text-sm hidden"></p>
-                <button onclick="handleLogin()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">
-                    <span>שמור והתחל</span>
-                    <i data-lucide="arrow-left"></i>
-                </button>
-            </div>
-        </div>
+    <!-- שכבת התראות (Toasts) -->
+    <div id="toast-container" class="fixed top-4 left-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- מסך טעינה ראשי -->
+    <div id="app-loader" class="fixed inset-0 bg-white z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="loader-ring"></div>
+        <h2 class="mt-4 text-xl font-bold text-slate-700 tracking-wider">PANALIX</h2>
+        <p class="text-slate-400 text-sm">מאתחל מערכות...</p>
     </div>
 
-    <!-- Main App Structure -->
-    <div id="main-app" class="hidden h-screen flex overflow-hidden">
-        
-        <!-- Sidebar -->
-        <aside class="w-64 bg-white border-l border-slate-200 flex flex-col shadow-sm z-10">
-            <div class="p-6 border-b border-slate-100">
-                <h2 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
-                    <i data-lucide="book-open"></i> Panalix
-                </h2>
+    <!-- מסך התחברות (API Key) -->
+    <section id="auth-screen" class="hidden fixed inset-0 bg-slate-100 z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row h-auto min-h-[500px]">
+            <!-- צד ימין - תמונה/עיצוב -->
+            <div class="w-full md:w-5/12 bg-blue-600 p-8 text-white flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-800 z-0"></div>
+                <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                <div class="relative z-10">
+                    <h1 class="text-4xl font-black mb-2 tracking-tight">PANALIX</h1>
+                    <p class="text-blue-100 text-sm leading-relaxed opacity-90">
+                        פלטפורמת הסטודיו המתקדמת ליצירת קומיקס באמצעות בינה מלאכותית גנרטיבית.
+                    </p>
+                </div>
+                <div class="relative z-10 mt-8">
+                    <div class="flex items-center gap-3 text-sm font-medium bg-blue-700/50 p-3 rounded-lg border border-blue-500/30">
+                        <i data-lucide="shield-check" class="w-5 h-5 text-blue-300"></i>
+                        <span>סביבה מאובטחת ומסוננת</span>
+                    </div>
+                </div>
             </div>
-            
-            <nav class="flex-1 p-4 space-y-2">
-                <button onclick="navigateTo(1)" id="nav-step-1" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 text-blue-700">
-                    <i data-lucide="pen-tool"></i> תכנון הסיפור
+
+            <!-- צד שמאל - טופס -->
+            <div class="w-full md:w-7/12 p-8 md:p-12 flex flex-col justify-center bg-white relative">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">התחברות למערכת</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <label for="api-key-input" class="block text-sm font-semibold text-slate-600 mb-2">Google AI Studio API Key</label>
+                        <div class="relative group">
+                            <i data-lucide="key" class="absolute right-3 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"></i>
+                            <input 
+                                type="password" 
+                                id="api-key-input" 
+                                class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full pr-10 p-3 transition-all outline-none" 
+                                placeholder="הזן את המפתח שלך כאן..."
+                                autocomplete="off"
+                            >
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">
+                            המפתח נשמר מקומית בדפדפן שלך בלבד. 
+                            <a href="#" class="text-blue-600 hover:underline">אין לך מפתח?</a>
+                        </p>
+                    </div>
+
+                    <div id="auth-error-msg" class="hidden bg-red-50 border-r-4 border-red-500 p-4 rounded-sm">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="alert-circle" class="h-5 w-5 text-red-400"></i>
+                            </div>
+                            <div class="mr-3">
+                                <p class="text-sm text-red-700 font-medium error-text">שגיאה באימות המפתח</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="login-btn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-[1.02]">
+                        <span class="btn-text">כניסה למערכת</span>
+                        <div class="btn-loader hidden ml-2"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- האפליקציה הראשית -->
+    <div id="main-interface" class="hidden flex h-screen w-full bg-slate-50">
+        
+        <!-- סרגל צד (Sidebar) -->
+        <aside class="w-72 bg-white border-l border-slate-200 flex flex-col shadow-lg z-20 transition-all duration-300 relative">
+            <!-- לוגו -->
+            <div class="h-16 flex items-center px-6 border-b border-slate-100 bg-white">
+                <i data-lucide="layers" class="w-6 h-6 text-blue-600 ml-3"></i>
+                <span class="text-xl font-black text-slate-800 tracking-tight">PANALIX</span>
+                <span class="mr-auto text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">PRO</span>
+            </div>
+
+            <!-- סטטוס משתמש -->
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs shadow-md">
+                        AI
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-900 truncate">משתמש מחובר</p>
+                        <p class="text-xs text-slate-500 truncate" id="key-display">••••••••</p>
+                    </div>
+                    <button id="logout-btn" class="text-slate-400 hover:text-red-500 transition-colors" title="התנתק">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- תפריט ניווט -->
+            <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-3">תהליך עבודה</div>
+                
+                <button class="nav-item active w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all group" data-step="1">
+                    <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center ml-3 group-hover:bg-blue-600 group-hover:text-white transition-colors nav-icon-bg">
+                        <i data-lucide="pen-tool" class="w-4 h-4"></i>
+                    </span>
+                    <span class="flex-1 text-right">תכנון עלילה</span>
+                    <div class="w-1.5 h-1.5 rounded-full bg-blue-500 status-dot"></div>
                 </button>
-                <button onclick="navigateTo(2)" id="nav-step-2" disabled class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i data-lucide="check-square"></i> אישור ועריכה
+
+                <button class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50 transition-all group" data-step="2" disabled>
+                    <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center ml-3 group-hover:bg-slate-200 transition-colors nav-icon-bg">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                    </span>
+                    <span class="flex-1 text-right">דמויות וסטוריבורד</span>
+                    <i data-lucide="lock" class="w-3 h-3 text-slate-300 lock-icon"></i>
                 </button>
-                <button onclick="navigateTo(3)" id="nav-step-3" disabled class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <i data-lucide="image"></i> יצירת הקומיקס
+
+                <button class="nav-item w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50 transition-all group" data-step="3" disabled>
+                    <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center ml-3 group-hover:bg-slate-200 transition-colors nav-icon-bg">
+                        <i data-lucide="palette" class="w-4 h-4"></i>
+                    </span>
+                    <span class="flex-1 text-right">ייצור ועיבוד</span>
+                    <i data-lucide="lock" class="w-3 h-3 text-slate-300 lock-icon"></i>
+                </button>
+
+                <div class="mt-8 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-3">הגדרות וכלים</div>
+                
+                <button onclick="window.app.ui.modals.open('keys')" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+                    <i data-lucide="key" class="w-4 h-4 ml-3 text-slate-400"></i>
+                    ניהול מפתחות
+                </button>
+                <button onclick="window.app.project.reset()" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-colors">
+                    <i data-lucide="trash-2" class="w-4 h-4 ml-3 text-slate-400 group-hover:text-red-500"></i>
+                    איפוס פרויקט
                 </button>
             </nav>
 
-            <div class="p-4 border-t border-slate-100">
-                <button onclick="openKeyModal()" class="w-full flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 mb-3 transition">
-                    <i data-lucide="key"></i> ניהול מפתחות
-                </button>
-                <button onclick="logout()" class="w-full flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition">
-                    <i data-lucide="log-out"></i> יציאה ומחיקת נתונים
-                </button>
+            <!-- קרדיט תחתון -->
+            <div class="p-4 border-t border-slate-200">
+                <div class="bg-indigo-50 rounded-lg p-3 border border-indigo-100">
+                    <p class="text-xs text-indigo-800 font-medium mb-1">טיפ מקצועי</p>
+                    <p class="text-[10px] text-indigo-600 leading-tight">
+                        השתמש בתיאורים מפורטים של הרגשות לקבלת הבעות פנים מדויקות.
+                    </p>
+                </div>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
-        <main class="flex-1 overflow-y-auto bg-slate-50 p-8 relative">
+        <!-- אזור תוכן מרכזי -->
+        <main class="flex-1 overflow-hidden relative flex flex-col h-full">
             
-            <!-- Step 1: Story Input -->
-            <div id="step-1-content" class="max-w-3xl mx-auto fade-in">
-                <h2 class="text-2xl font-bold mb-4 text-slate-800">שלב 1: הרעיון שלך</h2>
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <label class="block text-sm font-medium text-slate-700 mb-2">תאר את הסיפור לקומיקס</label>
-                    <textarea id="story-input" class="w-full h-64 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" placeholder="למשל: ילד צעיר מוצא שעון עתיק בעליית הגג שמסוגל לעצור את הזמן..."></textarea>
-                    <div class="mt-6 flex justify-end">
-                        <button onclick="generatePlan()" id="generate-plan-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition flex items-center gap-2">
-                            <i data-lucide="wand-2"></i> צור תוכנית קומיקס
-                        </button>
-                    </div>
+            <!-- Header עליון -->
+            <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10">
+                <div>
+                    <h2 id="page-title" class="text-lg font-bold text-slate-800">תכנון עלילה</h2>
+                    <p id="page-subtitle" class="text-xs text-slate-500">שלב 1 מתוך 3</p>
                 </div>
-                <!-- Loading Indicator Step 1 -->
-                <div id="loader-step-1" class="hidden mt-8 text-center">
-                    <div class="loader mx-auto mb-2"></div>
-                    <p class="text-slate-500">המתכנן עובד על התסריט...</p>
-                </div>
-            </div>
-
-            <!-- Step 2: Approval & Edit -->
-            <div id="step-2-content" class="hidden max-w-5xl mx-auto fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">שלב 2: תכנון ודמויות</h2>
-                    <div class="flex gap-2">
-                         <button onclick="askForImprovements()" class="text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium transition border border-blue-200">
-                            <i data-lucide="sparkles" class="inline w-4 h-4 ml-1"></i> הצעות שיפור
-                        </button>
-                        <button onclick="approveAndStart()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2">
-                            אשר והתחל ייצור <i data-lucide="arrow-left"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Global Settings -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">כותרת הקומיקס</label>
-                            <input type="text" id="plan-title" class="w-full font-bold text-xl border-b border-slate-300 focus:border-blue-500 focus:outline-none py-1" onchange="updatePlanField('title', this.value)">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">סגנון אומנותי</label>
-                            <input type="text" id="plan-style" class="w-full text-slate-700 border-b border-slate-300 focus:border-blue-500 focus:outline-none py-1" onchange="updatePlanField('globalStyle', this.value)">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Characters Section -->
-                <h3 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
-                    <i data-lucide="users"></i> דמויות
-                    <button onclick="generateAllCharacters()" id="gen-chars-btn" class="mr-auto text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">
-                        צור תמונות דמויות
+                <div class="flex items-center gap-4">
+                    <div class="h-8 w-px bg-slate-200"></div>
+                    <button class="p-2 text-slate-400 hover:text-blue-600 transition-colors rounded-full hover:bg-blue-50 relative" title="התראות">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                     </button>
-                </h3>
-                <div id="characters-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-                    <!-- Characters injected here -->
                 </div>
+            </header>
 
-                <!-- Pages Editor -->
-                <h3 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
-                    <i data-lucide="layers"></i> עמודים וסצנות
-                </h3>
-                <div id="pages-container" class="space-y-6">
-                    <!-- Pages injected here -->
-                </div>
-            </div>
+            <!-- מיכל תוכן גלילה -->
+            <div class="flex-1 overflow-y-auto p-8 relative scroll-smooth" id="content-area">
+                
+                <!-- שלב 1: הזנת סיפור -->
+                <section id="step-1" class="step-content max-w-4xl mx-auto animate-fade-in">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4 text-purple-500"></i>
+                                הרעיון המרכזי
+                            </h3>
+                            <span class="text-xs font-mono text-slate-400 bg-white border px-2 py-1 rounded">Model: Gemini 2.0 Flash</span>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="space-y-2">
+                                <label class="block text-sm font-medium text-slate-700">על מה הסיפור שלך?</label>
+                                <textarea id="story-prompt" class="w-full h-64 p-4 text-base border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-shadow" placeholder="כתוב כאן את תקציר העלילה, הדמויות והאווירה הכללית... למשל: בעולם עתידני שבו גשם הוא נדיר, ילדה צעירה מוצאת ענן מלאכותי עזוב..."></textarea>
+                                <div class="flex justify-between text-xs text-slate-500 px-1">
+                                    <span>מינימום 20 תווים</span>
+                                    <span id="char-count">0 תווים</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+                            <button id="btn-generate-plan" class="btn-primary flex items-center gap-2 px-8 py-3 rounded-lg font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all transform hover:-translate-y-0.5">
+                                <i data-lucide="wand-2" class="w-4 h-4"></i>
+                                צור תוכנית קומיקס
+                            </button>
+                        </div>
+                    </div>
 
-            <!-- Step 3: Generation -->
-            <div id="step-3-content" class="hidden max-w-5xl mx-auto fade-in">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-slate-800">שלב 3: הקומיקס המוכן</h2>
-                    <div class="flex gap-2">
-                        <button onclick="exportProject('pdf')" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                            <i data-lucide="file-text"></i> ייצא PDF
+                    <!-- אזור לוגים בזמן אמת -->
+                    <div id="planner-logs" class="mt-6 hidden">
+                        <div class="bg-slate-900 rounded-lg p-4 font-mono text-xs text-green-400 shadow-inner overflow-hidden">
+                            <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-2">
+                                <span class="text-slate-400">System Logs</span>
+                                <div class="flex gap-1">
+                                    <div class="w-2 h-2 rounded-full bg-red-500"></div>
+                                    <div class="w-2 h-2 rounded-full bg-yellow-500"></div>
+                                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                                </div>
+                            </div>
+                            <div class="log-content space-y-1 h-32 overflow-y-auto"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- שלב 2: עריכה ואישור -->
+                <section id="step-2" class="step-content hidden max-w-6xl mx-auto animate-fade-in pb-20">
+                    <!-- הגדרות גלובליות -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">שם הקומיקס</label>
+                            <input type="text" id="project-title" class="w-full text-2xl font-black text-slate-800 border-none focus:ring-0 p-0 placeholder-slate-300" placeholder="שם הקומיקס...">
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">סגנון אומנותי</label>
+                            <input type="text" id="project-style" class="w-full text-base font-medium text-blue-600 border-none focus:ring-0 p-0 placeholder-blue-300" placeholder="למשל: מנגה, ריאליסטי...">
+                        </div>
+                    </div>
+
+                    <!-- כרטיסיות דמויות -->
+                    <div class="mb-10">
+                        <div class="flex justify-between items-end mb-4">
+                            <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="users" class="w-5 h-5 text-slate-500"></i>
+                                דמויות ראשיות
+                            </h3>
+                            <button onclick="window.app.director.generateAllCharacters()" class="text-sm font-medium text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors border border-blue-200">
+                                <i data-lucide="refresh-cw" class="w-3 h-3 inline mr-1"></i>
+                                צור מחדש את כל הדמויות
+                            </button>
+                        </div>
+                        <div id="characters-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <!-- דינמי: דמויות ירונדרו כאן -->
+                        </div>
+                    </div>
+
+                    <!-- עורך העמודים (Storyboard) -->
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="layout" class="w-5 h-5 text-slate-500"></i>
+                                תכנון העמודים (Storyboard)
+                            </h3>
+                        </div>
+                        <div id="pages-editor-container" class="space-y-6">
+                            <!-- דינמי: עמודים ירונדרו כאן -->
+                        </div>
+                    </div>
+
+                    <!-- Floating Action Bar for Step 2 -->
+                    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200 shadow-2xl rounded-full px-6 py-3 flex items-center gap-4 z-40">
+                        <button onclick="window.app.planner.refinePlan()" class="flex items-center gap-2 text-slate-600 hover:text-blue-600 font-medium text-sm transition-colors">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            בקש שיפורים
+                        </button>
+                        <div class="h-6 w-px bg-slate-300"></div>
+                        <button onclick="window.app.production.start()" class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:shadow-lg transition-all transform hover:scale-105">
+                            אשר והתחל ייצור
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
                         </button>
                     </div>
-                </div>
+                </section>
 
-                <!-- Progress Bar -->
-                <div id="generation-progress-container" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 hidden">
-                    <div class="flex justify-between text-sm text-slate-600 mb-2">
-                        <span id="progress-text">יוצר עמוד 1...</span>
-                        <span id="progress-percent">0%</span>
+                <!-- שלב 3: תוצאות -->
+                <section id="step-3" class="step-content hidden max-w-7xl mx-auto animate-fade-in">
+                    <div class="mb-8 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-3xl font-black text-slate-800 tracking-tight mb-1">הקומיקס המוכן</h2>
+                            <p class="text-slate-500">צפייה, עריכה וייצוא</p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn-secondary flex items-center gap-2">
+                                <i data-lucide="share-2" class="w-4 h-4"></i>
+                                שיתוף
+                            </button>
+                            <button class="btn-primary bg-slate-800 hover:bg-slate-900 text-white flex items-center gap-2 px-5 py-2.5 rounded-lg" onclick="window.print()">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                הורד כ-PDF
+                            </button>
+                        </div>
                     </div>
-                    <div class="w-full bg-slate-200 rounded-full h-2.5">
-                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-                    </div>
-                </div>
 
-                <!-- Comic Grid -->
-                <div id="comic-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Generated pages injected here -->
-                </div>
+                    <!-- מד התקדמות -->
+                    <div id="production-status" class="bg-white p-6 rounded-xl border border-blue-100 shadow-sm mb-8 hidden">
+                        <div class="flex justify-between text-sm font-bold text-slate-700 mb-2">
+                            <span id="prod-status-text">מייצר עמודים...</span>
+                            <span id="prod-percent">0%</span>
+                        </div>
+                        <div class="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div id="prod-bar" class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 w-0 transition-all duration-500"></div>
+                        </div>
+                    </div>
+
+                    <!-- רשת הקומיקס -->
+                    <div id="comic-gallery" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-8 pb-20">
+                        <!-- דינמי -->
+                    </div>
+                </section>
+
             </div>
-
         </main>
     </div>
 
     <!-- Modals -->
-
-    <!-- Key Management Modal -->
-    <div id="key-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 m-4">
-            <h3 class="text-xl font-bold mb-4">ניהול מפתחות API</h3>
-            <p class="text-sm text-slate-500 mb-4">הוסף מפתחות גיבוי למקרה שמפתח ראשי יגיע למגבלת שימוש.</p>
-            <textarea id="backup-keys-input" class="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm font-mono mb-4" placeholder="הדבק מפתחות נוספים כאן (מופרדים בפסיק או בשורה חדשה)"></textarea>
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModal('key-modal')" class="text-slate-500 hover:bg-slate-100 px-4 py-2 rounded-lg">ביטול</button>
-                <button onclick="saveBackupKeys()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">שמור מפתחות</button>
+    
+    <!-- Modal: Key Management -->
+    <div id="modal-keys" class="modal-backdrop hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-0 overflow-hidden transform transition-all scale-100">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="text-lg font-bold text-slate-800">ניהול מפתחות API</h3>
+                <button onclick="window.app.ui.modals.close('keys')" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-600 mb-4 leading-relaxed">
+                    כדי להבטיח עבודה רציפה, מומלץ להזין מספר מפתחות. המערכת תעבור אוטומטית למפתח הבא אם אחד ייחסם (שגיאת 429).
+                </p>
+                <textarea id="backup-keys-area" class="w-full h-32 p-3 text-xs font-mono bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="הדבק מפתחות כאן (מופרדים בפסיק או בשורה חדשה)"></textarea>
+                <div class="mt-2 text-xs text-slate-400">
+                    סה"כ מפתחות במאגר: <span id="pool-count" class="font-bold text-blue-600">1</span>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button onclick="window.app.ui.modals.close('keys')" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg">ביטול</button>
+                <button onclick="window.app.auth.addKeys()" class="px-4 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm">שמור שינויים</button>
             </div>
         </div>
     </div>
 
-    <!-- Unified Edit Modal -->
-    <div id="edit-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 m-4">
-            <h3 class="text-xl font-bold mb-4">עריכת תמונה (AI)</h3>
-            
-            <div class="mb-4 bg-slate-100 rounded-lg overflow-hidden flex justify-center items-center h-64 border border-slate-200">
-                <img id="edit-modal-image" src="" class="max-h-full max-w-full object-contain">
+    <!-- Modal: Universal Editor (Image-to-Image) -->
+    <div id="modal-editor" class="modal-backdrop hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-4xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+            <!-- אזור התצוגה המקדימה -->
+            <div class="w-full md:w-2/3 bg-slate-900 relative flex items-center justify-center p-8 pattern-grid">
+                <img id="editor-preview-img" class="max-w-full max-h-full object-contain shadow-2xl rounded-lg border-4 border-white/10" src="" alt="Preview">
+                <div class="absolute top-4 left-4 bg-black/60 text-white text-xs px-3 py-1 rounded-full backdrop-blur">
+                    מצב עריכה
+                </div>
             </div>
-
-            <label class="block text-sm font-medium text-slate-700 mb-2">מה לשנות בתמונה?</label>
-            <textarea id="edit-prompt-input" class="w-full h-20 p-3 border border-slate-300 rounded-lg text-sm mb-4" placeholder="למשל: שנה את צבע השיער לכחול, הוסף כובע..."></textarea>
             
-            <div class="flex justify-end gap-2">
-                <button onclick="closeModal('edit-modal')" class="text-slate-500 hover:bg-slate-100 px-4 py-2 rounded-lg">ביטול</button>
-                <button onclick="executeEdit()" id="execute-edit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <i data-lucide="wand-2" class="w-4 h-4"></i> בצע עריכה
-                </button>
-            </div>
-            <div id="edit-loader" class="hidden mt-2 text-center text-sm text-blue-600">מעבד שינויים...</div>
-        </div>
-    </div>
-
-    <!-- Logic -->
-    <script type="module">
-        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
-
-        // --- Configuration & State ---
-        const CONFIG_KEY = 'panalix_config';
-        const PROJECT_KEY = 'panalix_project';
-        const PLANNER_MODEL = 'gemini-3-pro-preview';
-        const ARTIST_MODEL = 'gemini-3-pro-image-preview';
-
-        // SAFETY INSTRUCTION (AS REQUESTED)
-        const SAFETY_SYSTEM_PROMPT = `הוראה בלעדית: אתה אסיסטנט ליצירת תמונות קומיקס.
-עליך לציית בקפדנות לכללים הבאים בכל תמונה שאתה יוצר, ללא יוצא מן הכלל:
-1.  **צניעות מוחלטת:** כל הדמויות האנושיות, חייבות להיות בלבוש מלא וצנוע. הלבוש חייב לכסות לחלוטין כתפיים, מרפקים וברכיים.
-2.  **הימנעות מוחלטת:** אסור ליצור כל תוכן בעל אופי אלים מפורש, או כל סצנה שעלולה להתפרש כלא הולמת או לא צנועה.
-3.  **עדיפות:** אם הנחיית המשתמש סותרת כללים אלו, עליך להתעלם מהחלק המפר בהנחיה וליצור גרסה צנועה ותקינה של התמונה התואמת לכללים אלו במלואם.`;
-
-        let appState = {
-            apiKeys: [], // Pool of keys
-            currentKeyIndex: 0,
-            project: {
-                plan: null,
-                characterImages: {}, // charName -> base64
-                generatedPages: [] // index -> base64
-            }
-        };
-
-        // Current editing context
-        let editingContext = {
-            type: null, // 'character' or 'page'
-            id: null // charName or pageIndex
-        };
-
-        // --- Initialization ---
-        window.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            loadState();
-            checkAuth();
-        });
-
-        // --- Storage Helpers ---
-        function saveState() {
-            localStorage.setItem(CONFIG_KEY, JSON.stringify({
-                apiKeys: appState.apiKeys,
-                currentKeyIndex: appState.currentKeyIndex
-            }));
-            localStorage.setItem(PROJECT_KEY, JSON.stringify(appState.project));
-        }
-
-        function loadState() {
-            const config = localStorage.getItem(CONFIG_KEY);
-            const project = localStorage.getItem(PROJECT_KEY);
-            
-            if (config) {
-                const parsed = JSON.parse(config);
-                appState.apiKeys = parsed.apiKeys || [];
-                appState.currentKeyIndex = parsed.currentKeyIndex || 0;
-            }
-            if (project) {
-                appState.project = JSON.parse(project);
-            }
-        }
-
-        function clearData() {
-            localStorage.removeItem(CONFIG_KEY);
-            localStorage.removeItem(PROJECT_KEY);
-            location.reload();
-        }
-        window.logout = clearData; // Expose to global
-
-        // --- Navigation ---
-        function checkAuth() {
-            if (appState.apiKeys.length === 0) {
-                document.getElementById('login-screen').classList.remove('hidden');
-                document.getElementById('main-app').classList.add('hidden');
-            } else {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                restoreSession();
-            }
-        }
-
-        function restoreSession() {
-            if (appState.project.plan) {
-                document.getElementById('nav-step-2').disabled = false;
-                renderPlan();
-                if (appState.project.generatedPages.length > 0) {
-                    document.getElementById('nav-step-3').disabled = false;
-                    renderGeneratedGallery();
-                }
-                // Navigate to latest available step
-                if (appState.project.generatedPages.length > 0) navigateTo(3);
-                else navigateTo(2);
-            } else {
-                navigateTo(1);
-            }
-        }
-
-        window.navigateTo = function(step) {
-            // Hide all
-            document.getElementById('step-1-content').classList.add('hidden');
-            document.getElementById('step-2-content').classList.add('hidden');
-            document.getElementById('step-3-content').classList.add('hidden');
-            
-            // Show active
-            document.getElementById(`step-${step}-content`).classList.remove('hidden');
-            
-            // Update sidebar styles
-            [1, 2, 3].forEach(i => {
-                const btn = document.getElementById(`nav-step-${i}`);
-                if (i === step) {
-                    btn.classList.add('bg-blue-50', 'text-blue-700');
-                    btn.classList.remove('text-slate-500');
-                } else {
-                    btn.classList.remove('bg-blue-50', 'text-blue-700');
-                    btn.classList.add('text-slate-500');
-                }
-            });
-        };
-
-        // --- API & Key Management ---
-        window.handleLogin = async function() {
-            const input = document.getElementById('api-key-input');
-            const errorMsg = document.getElementById('login-error');
-            const btn = document.getElementById('login-btn');
-            const key = input.value.trim();
-
-            if (!key) return;
-
-            btn.disabled = true;
-            btn.innerHTML = '<div class="loader w-6 h-6 border-white border-t-transparent"></div>';
-            errorMsg.classList.add('hidden');
-
-            try {
-                // Ping to validate
-                const isValid = await validateKey(key);
-                if (isValid) {
-                    appState.apiKeys = [key];
-                    saveState();
-                    checkAuth();
-                } else {
-                    throw new Error('המפתח אינו תקין');
-                }
-            } catch (e) {
-                errorMsg.textContent = 'שגיאה: המפתח אינו תקין או שאינו תומך במודלים הנדרשים.';
-                errorMsg.classList.remove('hidden');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<span>שמור והתחל</span><i data-lucide="arrow-left"></i>';
-                lucide.createIcons();
-            }
-        };
-
-        async function validateKey(key) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${PLANNER_MODEL}:generateContent?key=${key}`;
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: "test" }] }] })
-            });
-            return response.ok;
-        }
-
-        // Core Fetch with Retry Logic
-        async function fetchWithRetry(model, payload) {
-            let attempts = 0;
-            const maxAttempts = appState.apiKeys.length;
-
-            while (attempts < maxAttempts) {
-                const currentKey = appState.apiKeys[appState.currentKeyIndex];
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
-
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (response.status === 429 || response.status >= 500) {
-                        // Switch key and retry
-                        console.warn(`Key failed (${response.status}), switching...`);
-                        appState.currentKeyIndex = (appState.currentKeyIndex + 1) % appState.apiKeys.length;
-                        saveState();
-                        attempts++;
-                        continue; 
-                    }
-
-                    if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error?.message || 'API Error');
-                    }
-
-                    return await response.json();
-
-                } catch (e) {
-                    console.error("Fetch error:", e);
-                    // Network errors also trigger retry logic if possible, 
-                    // but usually we want to break if it's not a key issue.
-                    // For simplicity, we assume fetch errors might be transient or key related.
-                    attempts++;
-                    if (attempts >= maxAttempts) throw e;
-                }
-            }
-            
-            // If we are here, all keys failed.
-            openKeyModal();
-            throw new Error('All keys exhausted or invalid.');
-        }
-
-        // --- Logic: Step 1 (Planner) ---
-        window.generatePlan = async function() {
-            const prompt = document.getElementById('story-input').value;
-            if (!prompt) return;
-
-            const btn = document.getElementById('generate-plan-btn');
-            const loader = document.getElementById('loader-step-1');
-            
-            btn.classList.add('hidden');
-            loader.classList.remove('hidden');
-
-            const schema = {
-                type: "OBJECT",
-                properties: {
-                    title: { type: "STRING" },
-                    globalStyle: { type: "STRING" },
-                    characters: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                name: { type: "STRING" },
-                                description: { type: "STRING" }
-                            },
-                            required: ["name", "description"]
-                        }
-                    },
-                    pages: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                pageNumber: { type: "INTEGER" },
-                                sceneDescription: { type: "STRING" },
-                                compositionSuggestion: { type: "STRING" },
-                                suggestedEmotion: { type: "STRING" },
-                                narration: { type: "STRING" },
-                                dialogue: {
-                                    type: "ARRAY",
-                                    items: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            character: { type: "STRING" },
-                                            type: { type: "STRING" },
-                                            text: { type: "STRING" }
-                                        }
-                                    }
-                                }
-                            },
-                            required: ["pageNumber", "sceneDescription"]
-                        }
-                    }
-                },
-                required: ["title", "globalStyle", "characters", "pages"]
-            };
-
-            const systemInstruction = `You are a professional comic book planner. 
-            Create a structured plan in JSON.
-            IMPORTANT: Output ONLY valid JSON.
-            Language: Hebrew (unless the story is English).`;
-
-            try {
-                const payload = {
-                    contents: [{ parts: [{ text: `Create a comic plan for this story: ${prompt}` }] }],
-                    systemInstruction: { parts: [{ text: systemInstruction }] },
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: schema
-                    }
-                };
-
-                const data = await fetchWithRetry(PLANNER_MODEL, payload);
-                const text = data.candidates[0].content.parts[0].text;
-                appState.project.plan = JSON.parse(text);
-                appState.project.characterImages = {}; // Reset images on new plan
-                appState.project.generatedPages = [];
-                saveState();
+            <!-- אזור הבקרה -->
+            <div class="w-full md:w-1/3 bg-white flex flex-col border-l border-slate-200">
+                <div class="p-6 border-b border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-800">עריכת תמונה</h3>
+                    <p class="text-xs text-slate-500 mt-1">השתמש בבינה מלאכותית לשינוי פרטים</p>
+                </div>
                 
-                document.getElementById('nav-step-2').disabled = false;
-                navigateTo(2);
-                renderPlan();
-
-            } catch (e) {
-                alert('שגיאה ביצירת התוכנית: ' + e.message);
-            } finally {
-                btn.classList.remove('hidden');
-                loader.classList.add('hidden');
-            }
-        };
-
-        window.askForImprovements = async function() {
-            // Similar to generatePlan but feeds current JSON back
-            const btn = document.querySelector('button[onclick="askForImprovements()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<div class="loader w-4 h-4 border-blue-600 border-t-transparent"></div>';
-            
-            try {
-                const currentPlan = appState.project.plan;
-                const prompt = "Improve this comic plan to be more dramatic and visually interesting. Keep the JSON structure exactly the same.";
-                
-                // We construct a chat-like history or just append the JSON
-                const payload = {
-                    contents: [
-                        { role: "user", parts: [{ text: "Original Plan JSON: " + JSON.stringify(currentPlan) }] },
-                        { role: "user", parts: [{ text: prompt }] }
-                    ],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                const data = await fetchWithRetry(PLANNER_MODEL, payload);
-                const text = data.candidates[0].content.parts[0].text;
-                appState.project.plan = JSON.parse(text);
-                saveState();
-                renderPlan();
-                alert("התוכנית עודכנה בהצלחה!");
-
-            } catch (e) {
-                alert('שגיאה בשיפור התוכנית: ' + e.message);
-            } finally {
-                btn.innerHTML = originalText;
-                lucide.createIcons();
-            }
-        };
-
-        // --- Logic: Step 2 (Render & Edit) ---
-        function renderPlan() {
-            const plan = appState.project.plan;
-            if (!plan) return;
-
-            document.getElementById('plan-title').value = plan.title;
-            document.getElementById('plan-style').value = plan.globalStyle;
-
-            // Characters
-            const charContainer = document.getElementById('characters-grid');
-            charContainer.innerHTML = '';
-            plan.characters.forEach((char, idx) => {
-                const hasImg = appState.project.characterImages[char.name];
-                charContainer.innerHTML += `
-                    <div class="bg-white p-4 rounded-lg shadow border border-slate-100 flex flex-col h-full">
-                        <div class="h-48 bg-slate-100 rounded mb-3 flex items-center justify-center overflow-hidden border border-slate-200 relative">
-                            ${hasImg 
-                                ? `<img src="${hasImg}" class="w-full h-full object-cover">` 
-                                : `<span class="text-slate-400 text-sm">טרם נוצר</span>`}
-                            ${hasImg ? `
-                                <button onclick="openEditModal('character', '${char.name}')" class="absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow hover:bg-white text-blue-600 transition">
-                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
-                                </button>
-                            ` : ''}
+                <div class="p-6 flex-1 overflow-y-auto">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">הנחיית עריכה</label>
+                            <textarea id="editor-prompt" class="w-full h-32 p-3 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="למשל: שנה את צבע השיער לאדום, הוסף משקפי שמש..."></textarea>
                         </div>
-                        <h4 class="font-bold text-lg">${char.name}</h4>
-                        <textarea class="text-sm text-slate-600 flex-1 w-full border-transparent hover:border-slate-200 border rounded resize-none focus:outline-none focus:border-blue-300 p-1" 
-                            onchange="updateCharDesc(${idx}, this.value)">${char.description}</textarea>
-                    </div>
-                `;
-            });
-
-            // Pages
-            const pagesContainer = document.getElementById('pages-container');
-            pagesContainer.innerHTML = '';
-            plan.pages.forEach((page, idx) => {
-                // Format Dialogue for display/edit
-                const dialogueStr = page.dialogue ? page.dialogue.map(d => `${d.character}: ${d.text}`).join('\n') : '';
-
-                pagesContainer.innerHTML += `
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative group">
-                        <div class="absolute -left-3 -top-3 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shadow">
-                            ${page.pageNumber}
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                            <div>
-                                <label class="text-xs font-bold text-slate-400 uppercase">תיאור סצנה</label>
-                                <textarea class="w-full text-sm border-slate-200 rounded p-2 border focus:ring-1 focus:ring-blue-500 min-h-[80px]" onchange="updatePageField(${idx}, 'sceneDescription', this.value)">${page.sceneDescription}</textarea>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-400 uppercase">הצעה לקומפוזיציה</label>
-                                <textarea class="w-full text-sm border-slate-200 rounded p-2 border focus:ring-1 focus:ring-blue-500 min-h-[80px]" onchange="updatePageField(${idx}, 'compositionSuggestion', this.value)">${page.compositionSuggestion || ''}</textarea>
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="text-xs font-bold text-slate-400 uppercase">דיאלוג (דמות: טקסט)</label>
-                                <textarea class="w-full text-sm border-slate-200 rounded p-2 border focus:ring-1 focus:ring-blue-500 bg-slate-50 min-h-[60px]" onchange="updatePageDialogue(${idx}, this.value)">${dialogueStr}</textarea>
+                        
+                        <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
+                            <div class="flex gap-2">
+                                <i data-lucide="info" class="w-4 h-4 text-yellow-600 mt-0.5"></i>
+                                <p class="text-xs text-yellow-800 leading-tight">
+                                    השינויים מתבצעים על בסיס התמונה המקורית. שמור על הנחיות ברורות וצנועות.
+                                </p>
                             </div>
                         </div>
                     </div>
-                `;
-            });
-            lucide.createIcons();
-        }
+                </div>
 
-        // Data Update Helpers
-        window.updatePlanField = (key, val) => { appState.project.plan[key] = val; saveState(); };
-        window.updateCharDesc = (idx, val) => { appState.project.plan.characters[idx].description = val; saveState(); };
-        window.updatePageField = (idx, key, val) => { appState.project.plan.pages[idx][key] = val; saveState(); };
-        window.updatePageDialogue = (idx, rawText) => {
-            // Parse simplistic text back to object
-            const lines = rawText.split('\n');
-            const newDiag = lines.map(line => {
-                const parts = line.split(':');
-                if (parts.length < 2) return null;
-                return { character: parts[0].trim(), type: "speech", text: parts.slice(1).join(':').trim() };
-            }).filter(x => x);
-            appState.project.plan.pages[idx].dialogue = newDiag;
-            saveState();
-        };
-
-        // --- Character Generation ---
-        window.generateAllCharacters = async function() {
-            const btn = document.getElementById('gen-chars-btn');
-            btn.disabled = true;
-            btn.textContent = 'יוצר...';
-            
-            const chars = appState.project.plan.characters;
-            const style = appState.project.plan.globalStyle;
-
-            for (const char of chars) {
-                // Skip if exists (optional, but lets overwrite for now or maybe check)
-                const prompt = `Generate a character reference sheet. Style: ${style}. Character: ${char.name}. Description: ${char.description}. White background, full body shot.`;
-                try {
-                    const base64 = await generateImage(prompt);
-                    appState.project.characterImages[char.name] = base64;
-                    renderPlan(); // Refresh UI to show image
-                    saveState();
-                } catch (e) {
-                    console.error("Failed to gen char:", char.name, e);
-                }
-            }
-            
-            btn.disabled = false;
-            btn.textContent = 'צור תמונות דמויות';
-        };
-
-        // --- Logic: Step 3 (Final Production) ---
-        window.approveAndStart = async function() {
-            // Check keys
-            const required = appState.project.plan.pages.length;
-            const available = appState.apiKeys.length * 10; // Rough estimate of calls per key/minute
-            // Just warn if 0 keys, but we have checks elsewhere. 
-            // Real logic: We just start. The retry logic handles limits.
-            
-            navigateTo(3);
-            startProduction();
-        };
-
-        async function startProduction() {
-            const pages = appState.project.plan.pages;
-            const container = document.getElementById('comic-grid');
-            const progressContainer = document.getElementById('generation-progress-container');
-            const progressBar = document.getElementById('progress-bar');
-            const progressText = document.getElementById('progress-text');
-            const progressPercent = document.getElementById('progress-percent');
-
-            progressContainer.classList.remove('hidden');
-            container.innerHTML = ''; // Clear previous
-
-            for (let i = 0; i < pages.length; i++) {
-                const page = pages[i];
-                
-                // Update UI
-                const percent = Math.round(((i) / pages.length) * 100);
-                progressBar.style.width = `${percent}%`;
-                progressPercent.textContent = `${percent}%`;
-                progressText.textContent = `יוצר עמוד ${page.pageNumber}...`;
-
-                // If already generated, skip logic but render
-                if (appState.project.generatedPages[i]) {
-                    renderGeneratedPage(i, appState.project.generatedPages[i]);
-                    continue;
-                }
-
-                // Construct Prompt with Refs
-                // Note: Gemini doesn't currently support multiple image inputs easily via this specific REST flow for context 
-                // in the exact way one might hope (like "here is char A, here is char B"). 
-                // We will rely on detailed description + Global Style. 
-                // ADVANCED: We could try to pass the character sheet as inlineData if the model supports it.
-                // For this implementation, we will act as the "Artist" model prompt engineer.
-                
-                let prompt = `Create a comic book panel. 
-                Style: ${appState.project.plan.globalStyle}.
-                Scene: ${page.sceneDescription}.
-                Composition: ${page.compositionSuggestion}.
-                Mood: ${page.suggestedEmotion}.`;
-
-                // Add character visual descriptions explicitly to prompt since we can't reliably inject multiple images as "training data" per shot without fine-tuning.
-                // However, we CAN inject 1 image for img2img. But here we are creating from scratch.
-                // We will append descriptions.
-                const charsInScene = appState.project.plan.characters.filter(c => 
-                    page.sceneDescription.includes(c.name) || 
-                    (page.dialogue && page.dialogue.some(d => d.character === c.name))
-                );
-
-                if (charsInScene.length > 0) {
-                    prompt += "\n\nCharacters in scene details:";
-                    charsInScene.forEach(c => {
-                        prompt += `\n- ${c.name}: ${c.description}`;
-                    });
-                }
-
-                try {
-                    const base64 = await generateImage(prompt);
-                    appState.project.generatedPages[i] = base64;
-                    saveState();
-                    renderGeneratedPage(i, base64);
-                } catch (e) {
-                    console.error(`Page ${i+1} failed`, e);
-                }
-            }
-
-            progressBar.style.width = '100%';
-            progressPercent.textContent = '100%';
-            progressText.textContent = 'הושלם!';
-            setTimeout(() => progressContainer.classList.add('hidden'), 2000);
-            document.getElementById('nav-step-3').disabled = false;
-        }
-
-        function renderGeneratedPage(idx, base64) {
-            const container = document.getElementById('comic-grid');
-            const pageData = appState.project.plan.pages[idx];
-            
-            // Build Dialogue Bubbles HTML (Overlay)
-            let bubblesHtml = '';
-            // Ideally we would position these, but for now we list them below or try to overlay simply.
-            // Let's just put them below the image for clarity in this web app format.
-            
-            const div = document.createElement('div');
-            div.className = "bg-white p-2 rounded-xl shadow border border-slate-200 relative group";
-            div.innerHTML = `
-                <div class="relative overflow-hidden rounded-lg bg-slate-100">
-                    <img src="${base64}" class="w-full h-auto object-cover">
-                    <button onclick="openEditModal('page', ${idx})" class="absolute top-2 right-2 bg-white/90 p-2 rounded-full shadow hover:bg-white text-blue-600 opacity-0 group-hover:opacity-100 transition">
-                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                <div class="p-6 border-t border-slate-100 bg-slate-50 flex flex-col gap-3">
+                    <button id="btn-run-edit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="wand-2" class="w-4 h-4"></i>
+                        בצע עריכה
                     </button>
-                    <div class="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                        עמוד ${pageData.pageNumber}
-                    </div>
+                    <button onclick="window.app.ui.modals.close('editor')" class="w-full py-3 bg-white border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-all">
+                        ביטול
+                    </button>
                 </div>
-                <div class="mt-3 space-y-2">
-                    ${pageData.dialogue ? pageData.dialogue.map(d => `
-                        <div class="flex gap-2 text-sm">
-                            <span class="font-bold text-slate-700 min-w-[60px]">${d.character}:</span>
-                            <span class="bg-blue-50 text-slate-800 px-2 py-1 rounded flex-1">${d.text}</span>
-                        </div>
-                    `).join('') : ''}
-                    ${pageData.narration ? `<div class="bg-yellow-50 text-slate-700 text-xs p-2 italic border-l-4 border-yellow-400">${pageData.narration}</div>` : ''}
-                </div>
-            `;
-            container.appendChild(div);
-            lucide.createIcons();
-        }
+            </div>
+        </div>
+    </div>
 
-        // --- Image Generation Core ---
-        async function generateImage(prompt, inputImageBase64 = null) {
-            // Include Safety System Prompt in the text prompt as Gemini API for images 
-            // takes system instructions differently or ignores them in standard generateContent for images.
-            // Best practice for safety compliance via prompt engineering:
-            const fullPrompt = `${SAFETY_SYSTEM_PROMPT}\n\nUser Request: ${prompt}`;
-
-            const payload = {
-                contents: [{
-                    parts: [
-                        { text: fullPrompt }
-                    ]
-                }],
-                // generationConfig can go here if needed
-            };
-
-            // If input image exists (Edit mode / Img2Img)
-            if (inputImageBase64) {
-                // Remove header if present
-                const cleanBase64 = inputImageBase64.replace(/^data:image\/(png|jpeg|webp);base64,/, "");
-                payload.contents[0].parts.push({
-                    inlineData: {
-                        mimeType: "image/png",
-                        data: cleanBase64
-                    }
-                });
-            }
-
-            const data = await fetchWithRetry(ARTIST_MODEL, payload);
-            
-            // Extract Image
-            // Response format for image gen usually involves inlineData in the candidate
-            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
-                // Find the part with inlineData (image)
-                const imgPart = data.candidates[0].content.parts.find(p => p.inlineData);
-                if (imgPart) {
-                    return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
-                }
-            }
-            throw new Error("No image generated");
-        }
-
-        // --- Modals & Editing ---
-        window.openKeyModal = () => document.getElementById('key-modal').classList.remove('hidden', 'flex');
-        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
-
-        window.saveBackupKeys = () => {
-            const txt = document.getElementById('backup-keys-input').value;
-            const newKeys = txt.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 10);
-            if (newKeys.length > 0) {
-                appState.apiKeys.push(...newKeys);
-                saveState();
-                alert(`${newKeys.length} מפתחות נוספו בהצלחה!`);
-                closeModal('key-modal');
-                document.getElementById('backup-keys-input').value = '';
-            }
-        };
-
-        window.openEditModal = (type, id) => {
-            editingContext = { type, id };
-            const modal = document.getElementById('edit-modal');
-            const imgEl = document.getElementById('edit-modal-image');
-            
-            let currentSrc = "";
-            if (type === 'character') {
-                currentSrc = appState.project.characterImages[id];
-            } else {
-                currentSrc = appState.project.generatedPages[id];
-            }
-            
-            if (!currentSrc) return alert("אין תמונה לעריכה עדיין");
-            
-            imgEl.src = currentSrc;
-            document.getElementById('edit-prompt-input').value = '';
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        };
-
-        window.executeEdit = async function() {
-            const prompt = document.getElementById('edit-prompt-input').value;
-            if (!prompt) return;
-            
-            const btn = document.getElementById('execute-edit-btn');
-            const loader = document.getElementById('edit-loader');
-            const imgEl = document.getElementById('edit-modal-image');
-            
-            btn.disabled = true;
-            loader.classList.remove('hidden');
-            
-            try {
-                // Call Artist with Image + Text
-                const newImageBase64 = await generateImage(`Edit this image: ${prompt}. Keep the same style.`, imgEl.src);
-                
-                // Save Result
-                if (editingContext.type === 'character') {
-                    appState.project.characterImages[editingContext.id] = newImageBase64;
-                    renderPlan(); // Update main view
-                } else {
-                    appState.project.generatedPages[editingContext.id] = newImageBase64;
-                    // Re-render specific page in gallery is complex, easier to just update modal image
-                }
-                
-                imgEl.src = newImageBase64;
-                saveState();
-                
-            } catch (e) {
-                alert("עריכה נכשלה: " + e.message);
-            } finally {
-                btn.disabled = false;
-                loader.classList.add('hidden');
-            }
-        };
-        
-        // --- Export ---
-        window.exportProject = (type) => {
-            if (type === 'pdf') {
-                alert("ייצוא ל-PDF יוריד כעת את הקומיקס (הדמיה)");
-                window.print(); // Simple PDF export via browser print
-            }
-        };
-
-    </script>
+    <!-- ייבוא לוגיקה -->
+    <script type="module" src="app.js"></script>
 </body>
 </html>
