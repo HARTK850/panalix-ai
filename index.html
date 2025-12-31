@@ -1,1633 +1,934 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panalix - מחולל קומיקס AI</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panalix - AI Comic Generator</title>
     
-    * {
-      font-family: 'Heebo', sans-serif;
-    }
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    .fade-in {
-      animation: fadeIn 0.3s ease-in-out;
-    }
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     
-    .slide-up {
-      animation: slideUp 0.3s ease-out;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .loader {
-      border: 3px solid #e5e7eb;
-      border-top: 3px solid #3b82f6;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .card-shadow {
-      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    }
-    
-    .sidebar-shadow {
-      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
-    }
-    
-    textarea:focus, input:focus {
-      outline: none;
-      ring: 2px;
-      ring-color: #3b82f6;
-    }
-    
-    .step-button {
-      transition: all 0.2s ease;
-    }
-    
-    .step-button:not(:disabled):hover {
-      background-color: #eff6ff;
-    }
-    
-    .step-button.active {
-      background-color: #dbeafe;
-      border-right: 3px solid #3b82f6;
-    }
-    
-    .step-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
+    <!-- Google Font (Assistant for Hebrew) -->
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-    .modal-overlay {
-      background-color: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(4px);
-    }
+    <style>
+        body {
+            font-family: 'Assistant', sans-serif;
+            background-color: #f8fafc;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
 
-    .progress-bar {
-      transition: width 0.5s ease-in-out;
-    }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
 
-    .character-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-    .character-card {
-      transition: all 0.2s ease;
-    }
-  </style>
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-  <!-- Login Screen -->
-  <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl card-shadow p-8 w-full max-w-md fade-in">
-      <div class="text-center mb-8">
-        <div class="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
-        </div>
-        <h1 class="text-3xl font-bold text-gray-800">Panalix</h1>
-        <p class="text-gray-500 mt-2">מחולל קומיקס מבוסס AI</p>
-      </div>
-      
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            <i data-lucide="key" class="w-4 h-4 inline ml-1"></i>
-            מפתח API של Google AI Studio
-          </label>
-          <input 
-            type="password" 
-            id="api-key-input" 
-            placeholder="הדבק את מפתח ה-API שלך כאן..."
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-          >
-        </div>
-        
-        <div id="login-error" class="hidden bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-          <i data-lucide="alert-circle" class="w-4 h-4 inline ml-1"></i>
-          <span id="login-error-text"></span>
-        </div>
-        
-        <button 
-          id="save-key-btn"
-          class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
-        >
-          <span>שמור והתחל</span>
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-        </button>
-        
-        <p class="text-xs text-gray-400 text-center mt-4">
-          קבל מפתח API בחינם מ-
-          <a href="https://aistudio.google.com/apikey" target="_blank" class="text-blue-500 hover:underline">Google AI Studio</a>
-        </p>
-      </div>
-    </div>
-  </div>
+<body class="text-slate-800">
 
-  <!-- Main App -->
-  <div id="main-app" class="hidden min-h-screen flex">
-    <!-- Sidebar -->
-    <aside class="w-72 bg-white sidebar-shadow flex flex-col h-screen sticky top-0">
-      <div class="p-6 border-b border-gray-100">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-            <i data-lucide="sparkles" class="w-5 h-5 text-white"></i>
-          </div>
-          <div>
-            <h1 class="font-bold text-gray-800">Panalix</h1>
-            <p class="text-xs text-gray-400">מחולל קומיקס AI</p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Steps Navigation -->
-      <nav class="flex-1 p-4">
-        <p class="text-xs font-medium text-gray-400 mb-3 px-3">שלבי היצירה</p>
-        <div class="space-y-1">
-          <button id="step-1-btn" class="step-button active w-full text-right px-4 py-3 rounded-lg flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <i data-lucide="pen-tool" class="w-4 h-4 text-blue-600"></i>
-            </div>
-            <div>
-              <p class="font-medium text-gray-700">תכנון הסיפור</p>
-              <p class="text-xs text-gray-400">כתוב את הרעיון שלך</p>
-            </div>
-          </button>
-          
-          <button id="step-2-btn" class="step-button w-full text-right px-4 py-3 rounded-lg flex items-center gap-3" disabled>
-            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-              <i data-lucide="check-circle" class="w-4 h-4 text-gray-400"></i>
-            </div>
-            <div>
-              <p class="font-medium text-gray-700">אישור ועריכה</p>
-              <p class="text-xs text-gray-400">בדוק ושפר</p>
-            </div>
-          </button>
-          
-          <button id="step-3-btn" class="step-button w-full text-right px-4 py-3 rounded-lg flex items-center gap-3" disabled>
-            <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-              <i data-lucide="image" class="w-4 h-4 text-gray-400"></i>
-            </div>
-            <div>
-              <p class="font-medium text-gray-700">יצירת הקומיקס</p>
-              <p class="text-xs text-gray-400">צור את העמודים</p>
-            </div>
-          </button>
-        </div>
-      </nav>
-      
-      <!-- Key Management -->
-      <div class="p-4 border-t border-gray-100">
-        <p class="text-xs font-medium text-gray-400 mb-3 px-3">ניהול</p>
-        <div class="space-y-1">
-          <button id="manage-keys-btn" class="w-full text-right px-4 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-3 text-gray-600">
-            <i data-lucide="key" class="w-4 h-4"></i>
-            <span class="text-sm">ניהול מפתחות</span>
-            <span id="key-count" class="mr-auto bg-blue-100 text-blue-600 text-xs px-2 py-0.5 rounded-full">1</span>
-          </button>
-          
-          <button id="clear-storage-btn" class="w-full text-right px-4 py-2 rounded-lg hover:bg-red-50 flex items-center gap-3 text-gray-600 hover:text-red-600">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-            <span class="text-sm">נקה אחסון</span>
-          </button>
-          
-          <button id="logout-btn" class="w-full text-right px-4 py-2 rounded-lg hover:bg-gray-50 flex items-center gap-3 text-gray-600">
-            <i data-lucide="log-out" class="w-4 h-4"></i>
-            <span class="text-sm">התנתק</span>
-          </button>
-        </div>
-      </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="flex-1 p-8 overflow-auto">
-      <!-- Step 1: Story Input -->
-      <div id="step-1" class="max-w-4xl mx-auto fade-in">
-        <div class="mb-8">
-          <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <i data-lucide="pen-tool" class="w-6 h-6 text-blue-500"></i>
-            תכנון הסיפור
-          </h2>
-          <p class="text-gray-500 mt-2">תאר את הסיפור שלך וה-AI יהפוך אותו לתוכנית קומיקס מפורטת</p>
-        </div>
-        
-        <div class="bg-white rounded-2xl card-shadow p-6">
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            הסיפור שלך
-          </label>
-          <textarea 
-            id="story-input"
-            rows="10"
-            placeholder="תאר את הסיפור שלך כאן... למשל:
+    <!-- Screen 0: Login -->
+    <div id="login-screen" class="flex flex-col items-center justify-center h-screen bg-slate-100 p-4">
+        <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+            <h1 class="text-4xl font-bold text-blue-600 mb-2">Panalix</h1>
+            <p class="text-slate-500 mb-6">מחולל קומיקס מבוסס בינה מלאכותית</p>
             
-סיפור על גיבור-על צעיר בשם 'אלון' שמגלה שיש לו כוחות על-טבעיים. הוא גר בעיר תל אביב ופוגש מנטור מסתורי שמלמד אותו לשלוט בכוחותיו. בסצנה הראשונה אלון מתעורר בבוקר ומגלה שהוא יכול לרחף..."
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
-          ></textarea>
-          
-          <div class="flex items-center gap-4 mt-4">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-gray-700 mb-2">מספר עמודים רצוי</label>
-              <input 
-                type="number" 
-                id="page-count-input" 
-                value="4" 
-                min="1" 
-                max="20"
-                class="w-24 px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500"
-              >
+            <div class="space-y-4 text-right">
+                <label class="block text-sm font-medium text-slate-700">Google AI Studio API Key</label>
+                <input type="password" id="api-key-input" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="הדבק כאן את המפתח שלך...">
+                <p id="login-error" class="text-red-500 text-sm hidden"></p>
+                <button onclick="handleLogin()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition flex justify-center items-center gap-2">
+                    <span>שמור והתחל</span>
+                    <i data-lucide="arrow-left"></i>
+                </button>
             </div>
-          </div>
-          
-          <button 
-            id="generate-plan-btn"
-            class="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center gap-2"
-          >
-            <i data-lucide="wand-2" class="w-5 h-5"></i>
-            <span>צור תוכנית קומיקס</span>
-          </button>
         </div>
-      </div>
-      
-      <!-- Step 2: Approval Screen -->
-      <div id="step-2" class="hidden max-w-6xl mx-auto fade-in">
-        <div class="mb-8">
-          <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <i data-lucide="check-circle" class="w-6 h-6 text-blue-500"></i>
-            אישור ועריכה
-          </h2>
-          <p class="text-gray-500 mt-2">בדוק את התוכנית, ערוך לפי הצורך ואשר את הדמויות</p>
-        </div>
-        
-        <!-- Comic Title & Style -->
-        <div class="bg-white rounded-2xl card-shadow p-6 mb-6">
-          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <i data-lucide="bookmark" class="w-5 h-5 text-blue-500"></i>
-            פרטי הקומיקס
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">שם הקומיקס</label>
-              <input 
-                type="text" 
-                id="comic-title-input"
-                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500"
-              >
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">סגנון גלובלי</label>
-              <input 
-                type="text" 
-                id="global-style-input"
-                class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:border-blue-500"
-              >
-            </div>
-          </div>
-        </div>
-        
-        <!-- Characters Section -->
-        <div class="bg-white rounded-2xl card-shadow p-6 mb-6">
-          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <i data-lucide="users" class="w-5 h-5 text-blue-500"></i>
-            דמויות
-            <span id="characters-status" class="mr-auto text-sm text-gray-400"></span>
-          </h3>
-          <div id="characters-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Characters will be rendered here -->
-          </div>
-          <button 
-            id="regenerate-characters-btn"
-            class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all flex items-center gap-2"
-          >
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            <span>צור מחדש את כל הדמויות</span>
-          </button>
-        </div>
-        
-        <!-- Pages Section -->
-        <div class="bg-white rounded-2xl card-shadow p-6 mb-6">
-          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <i data-lucide="layout" class="w-5 h-5 text-blue-500"></i>
-            עמודים
-          </h3>
-          <div id="pages-container" class="space-y-4">
-            <!-- Pages will be rendered here -->
-          </div>
-          <button 
-            id="add-page-btn"
-            class="mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-all flex items-center gap-2"
-          >
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>הוסף עמוד</span>
-          </button>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="flex flex-wrap gap-4">
-          <button 
-            id="improve-plan-btn"
-            class="bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-xl border border-gray-200 transition-all flex items-center gap-2"
-          >
-            <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-500"></i>
-            <span>בקש הצעות שיפור</span>
-          </button>
-          
-          <button 
-            id="approve-plan-btn"
-            class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center gap-2"
-          >
-            <i data-lucide="check" class="w-5 h-5"></i>
-            <span>אשר תוכנית והתחל בייצור</span>
-          </button>
-        </div>
-      </div>
-      
-      <!-- Step 3: Generation -->
-      <div id="step-3" class="hidden max-w-6xl mx-auto fade-in">
-        <div class="mb-8">
-          <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
-            <i data-lucide="image" class="w-6 h-6 text-blue-500"></i>
-            יצירת הקומיקס
-          </h2>
-          <p class="text-gray-500 mt-2">ה-AI יוצר את עמודי הקומיקס שלך</p>
-        </div>
-        
-        <!-- Progress -->
-        <div class="bg-white rounded-2xl card-shadow p-6 mb-6">
-          <div class="flex items-center justify-between mb-3">
-            <span class="font-medium text-gray-700">התקדמות</span>
-            <span id="progress-text" class="text-sm text-gray-500">0 מתוך 0 עמודים</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-3">
-            <div id="progress-bar" class="progress-bar bg-blue-500 h-3 rounded-full" style="width: 0%"></div>
-          </div>
-        </div>
-        
-        <!-- Generated Pages Grid -->
-        <div id="generated-pages-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <!-- Generated pages will be rendered here -->
-        </div>
-        
-        <!-- Export Buttons -->
-        <div id="export-buttons" class="hidden flex flex-wrap gap-4">
-          <button 
-            id="export-pdf-btn"
-            class="bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center gap-2"
-          >
-            <i data-lucide="file-text" class="w-5 h-5"></i>
-            <span>ייצא ל-PDF</span>
-          </button>
-          
-          <button 
-            id="export-cbz-btn"
-            class="bg-purple-500 hover:bg-purple-600 text-white font-medium py-3 px-6 rounded-xl transition-all flex items-center gap-2"
-          >
-            <i data-lucide="archive" class="w-5 h-5"></i>
-            <span>ייצא ל-CBZ</span>
-          </button>
-          
-          <button 
-            id="restart-btn"
-            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl transition-all flex items-center gap-2"
-          >
-            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
-            <span>התחל מחדש</span>
-          </button>
-        </div>
-      </div>
-    </main>
-  </div>
-  
-  <!-- Edit Modal -->
-  <div id="edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="modal-overlay absolute inset-0" onclick="closeEditModal()"></div>
-    <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-2xl relative z-10 slide-up">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-          <i data-lucide="edit-3" class="w-5 h-5 text-blue-500"></i>
-          עריכת תמונה
-        </h3>
-        <button onclick="closeEditModal()" class="p-2 hover:bg-gray-100 rounded-lg">
-          <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
-        </button>
-      </div>
-      
-      <div class="flex flex-col md:flex-row gap-6">
-        <div class="flex-1">
-          <img id="edit-modal-image" src="/placeholder.svg" alt="תמונה לעריכה" class="w-full rounded-lg border border-gray-200">
-        </div>
-        <div class="flex-1 space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">הנחיית עריכה</label>
-            <textarea 
-              id="edit-prompt-input"
-              rows="4"
-              placeholder="תאר את השינויים שברצונך לבצע... למשל: 'שנה את צבע השיער לאדום'"
-              class="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:border-blue-500"
-            ></textarea>
-          </div>
-          
-          <div id="edit-error" class="hidden bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-            <i data-lucide="alert-circle" class="w-4 h-4 inline ml-1"></i>
-            <span id="edit-error-text"></span>
-          </div>
-          
-          <button 
-            id="apply-edit-btn"
-            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
-          >
-            <i data-lucide="wand-2" class="w-5 h-5"></i>
-            <span>בצע עריכה</span>
-          </button>
-        </div>
-      </div>
     </div>
-  </div>
-  
-  <!-- Keys Management Modal -->
-  <div id="keys-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <div class="modal-overlay absolute inset-0" onclick="closeKeysModal()"></div>
-    <div class="bg-white rounded-2xl card-shadow p-6 w-full max-w-lg relative z-10 slide-up">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-800 flex items-center gap-2">
-          <i data-lucide="key" class="w-5 h-5 text-blue-500"></i>
-          ניהול מפתחות API
-        </h3>
-        <button onclick="closeKeysModal()" class="p-2 hover:bg-gray-100 rounded-lg">
-          <i data-lucide="x" class="w-5 h-5 text-gray-500"></i>
-        </button>
-      </div>
-      
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">מפתחות פעילים</label>
-          <div id="active-keys-list" class="space-y-2 max-h-40 overflow-y-auto">
-            <!-- Keys will be listed here -->
-          </div>
-        </div>
+
+    <!-- Main App Structure -->
+    <div id="main-app" class="hidden h-screen flex overflow-hidden">
         
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">הוסף מפתחות גיבוי</label>
-          <textarea 
-            id="backup-keys-input"
-            rows="3"
-            placeholder="הדבק מפתחות נוספים, מופרדים בפסיק או שורה חדשה..."
-            class="w-full px-4 py-3 border border-gray-200 rounded-xl resize-none focus:border-blue-500"
-          ></textarea>
-        </div>
-        
-        <button 
-          id="add-backup-keys-btn"
-          class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
-        >
-          <i data-lucide="plus" class="w-5 h-5"></i>
-          <span>הוסף מפתחות</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading Overlay -->
-  <div id="loading-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-    <div class="text-center">
-      <div class="loader mx-auto mb-4"></div>
-      <p id="loading-text" class="text-gray-600 font-medium">טוען...</p>
-    </div>
-  </div>
-
-  <script type="module">
-    // ====== CONSTANTS & CONFIGURATION ======
-    const PLANNER_MODEL = 'gemini-2.5-pro-preview-06-05';
-    const ARTIST_MODEL = 'gemini-2.0-flash-preview-image-generation';
-    const API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-    
-    const ARTIST_SYSTEM_INSTRUCTION = `הוראה בלעדית: אתה אסיסטנט ליצירת תמונות קומיקס.
-עליך לציית בקפדנות לכללים הבאים בכל תמונה שאתה יוצר, ללא יוצא מן הכלל:
-1. **צניעות מוחלטת:** כל הדמויות האנושיות, חייבות להיות בלבוש מלא וצנוע. הלבוש חייב לכסות לחלוטין כתפיים, מרפקים וברכיים.
-2. **הימנעות מוחלטת:** אסור ליצור כל תוכן בעל אופי אלים מפורש, או כל סצנה שעלולה להתפרש כלא הולמת או לא צנועה.
-3. **עדיפות:** אם הנחיית המשתמש סותרת כללים אלו, עליך להתעלם מהחלק המפר בהנחיה וליצור גרסה צנועה ותקינה של התמונה התואמת לכללים אלו במלואם.`;
-
-    const JSON_SCHEMA = {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "שם קצר וקליט לקומיקס" },
-        globalStyle: { type: "string", description: "תיאור סגנון הציור הגלובלי" },
-        characters: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string", description: "שם הדמות" },
-              description: { type: "string", description: "תיאור חזותי מפורט של הדמות" }
-            },
-            required: ["name", "description"]
-          }
-        },
-        pages: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              pageNumber: { type: "integer" },
-              sceneDescription: { type: "string" },
-              compositionSuggestion: { type: "string" },
-              suggestedEmotion: { type: "string" },
-              dialogue: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    character: { type: "string" },
-                    type: { type: "string", enum: ["speech", "thought", "shout"] },
-                    text: { type: "string" }
-                  },
-                  required: ["character", "type", "text"]
-                }
-              },
-              narration: { type: "string" }
-            },
-            required: ["pageNumber", "sceneDescription"]
-          }
-        }
-      },
-      required: ["title", "globalStyle", "characters", "pages"]
-    };
-
-    // ====== STATE MANAGEMENT ======
-    let currentProject = {
-      jsonPlan: null,
-      characterImages: {},
-      generatedPages: []
-    };
-    
-    let apiKeyPool = [];
-    let currentKeyIndex = 0;
-    let currentStep = 1;
-    let editingTarget = null; // { type: 'character' | 'page', index: number }
-
-    // ====== LOCAL STORAGE HELPERS ======
-    function saveToStorage(key, value) {
-      localStorage.setItem(`panalix_${key}`, JSON.stringify(value));
-    }
-
-    function loadFromStorage(key) {
-      const data = localStorage.getItem(`panalix_${key}`);
-      return data ? JSON.parse(data) : null;
-    }
-
-    function clearStorage() {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('panalix_'));
-      keys.forEach(k => localStorage.removeItem(k));
-    }
-
-    // ====== API KEY MANAGEMENT ======
-    function getCurrentApiKey() {
-      return apiKeyPool[currentKeyIndex];
-    }
-
-    function switchToNextKey() {
-      currentKeyIndex = (currentKeyIndex + 1) % apiKeyPool.length;
-      return currentKeyIndex !== 0; // Returns false if we've cycled through all keys
-    }
-
-    function addApiKeys(keysString) {
-      const newKeys = keysString
-        .split(/[,\n]/)
-        .map(k => k.trim())
-        .filter(k => k.length > 10);
-      
-      newKeys.forEach(key => {
-        if (!apiKeyPool.includes(key)) {
-          apiKeyPool.push(key);
-        }
-      });
-      
-      saveToStorage('api_keys', apiKeyPool);
-      updateKeyCountDisplay();
-    }
-
-    function updateKeyCountDisplay() {
-      const countEl = document.getElementById('key-count');
-      if (countEl) {
-        countEl.textContent = apiKeyPool.length;
-      }
-    }
-
-    // ====== API FETCH WITH RETRY ======
-    async function fetchWithRetry(endpoint, body, maxRetries = apiKeyPool.length) {
-      let lastError = null;
-      const startIndex = currentKeyIndex;
-      
-      for (let attempt = 0; attempt < maxRetries; attempt++) {
-        const apiKey = getCurrentApiKey();
-        const url = `${API_BASE_URL}/${endpoint}?key=${apiKey}`;
-        
-        try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
-          
-          if (response.ok) {
-            return await response.json();
-          }
-          
-          if (response.status === 429 || response.status === 403) {
-            console.warn(`Key ${currentKeyIndex + 1} rate limited, switching...`);
-            if (!switchToNextKey()) {
-              if (currentKeyIndex === startIndex) {
-                throw new Error('כל מפתחות ה-API הגיעו למגבלת השימוש. נסה שוב מאוחר יותר או הוסף מפתחות נוספים.');
-              }
-            }
-            continue;
-          }
-          
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `שגיאת API: ${response.status}`);
-          
-        } catch (error) {
-          lastError = error;
-          if (error.message.includes('rate') || error.message.includes('quota')) {
-            if (!switchToNextKey()) {
-              if (currentKeyIndex === startIndex) break;
-            }
-            continue;
-          }
-          throw error;
-        }
-      }
-      
-      throw lastError || new Error('כל מפתחות ה-API נכשלו');
-    }
-
-    // ====== PLANNER MODEL API ======
-    async function callPlannerModel(prompt, responseSchema = null) {
-      const body = {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.8,
-          topP: 0.95,
-          maxOutputTokens: 8192
-        }
-      };
-
-      if (responseSchema) {
-        body.generationConfig.responseMimeType = "application/json";
-        body.generationConfig.responseSchema = responseSchema;
-      }
-
-      const response = await fetchWithRetry(`${PLANNER_MODEL}:generateContent`, body);
-      
-      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        throw new Error('לא התקבלה תשובה מהמודל');
-      }
-      
-      if (responseSchema) {
-        return JSON.parse(text);
-      }
-      return text;
-    }
-
-    // ====== ARTIST MODEL API ======
-    async function callArtistModel(textPrompt, imageBase64 = null) {
-      const parts = [];
-      
-      if (imageBase64) {
-        // Remove data URL prefix if present
-        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-        parts.push({
-          inlineData: {
-            mimeType: 'image/png',
-            data: base64Data
-          }
-        });
-      }
-      
-      parts.push({ text: textPrompt });
-
-      const body = {
-        contents: [{ parts }],
-        systemInstruction: {
-          parts: [{ text: ARTIST_SYSTEM_INSTRUCTION }]
-        },
-        generationConfig: {
-          temperature: 1,
-          topP: 0.95,
-          maxOutputTokens: 8192,
-          responseModalities: ["image", "text"]
-        }
-      };
-
-      const response = await fetchWithRetry(`${ARTIST_MODEL}:generateContent`, body);
-      
-      // Extract image from response
-      const candidates = response.candidates || [];
-      for (const candidate of candidates) {
-        const parts = candidate.content?.parts || [];
-        for (const part of parts) {
-          if (part.inlineData?.data) {
-            return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-          }
-        }
-      }
-      
-      throw new Error('לא התקבלה תמונה מהמודל');
-    }
-
-    // ====== VALIDATE API KEY ======
-    async function validateApiKey(apiKey) {
-      const url = `${API_BASE_URL}/${PLANNER_MODEL}:generateContent?key=${apiKey}`;
-      
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'test' }] }],
-            generationConfig: { maxOutputTokens: 10 }
-          })
-        });
-        
-        if (response.ok) {
-          return { valid: true };
-        }
-        
-        const errorData = await response.json().catch(() => ({}));
-        return { 
-          valid: false, 
-          error: errorData.error?.message || `שגיאה: ${response.status}` 
-        };
-      } catch (error) {
-        return { valid: false, error: error.message };
-      }
-    }
-
-    // ====== UI HELPERS ======
-    function showLoading(text = 'טוען...') {
-      document.getElementById('loading-text').textContent = text;
-      document.getElementById('loading-overlay').classList.remove('hidden');
-    }
-
-    function hideLoading() {
-      document.getElementById('loading-overlay').classList.add('hidden');
-    }
-
-    function showError(elementId, message) {
-      const errorEl = document.getElementById(elementId);
-      const textEl = document.getElementById(`${elementId}-text`);
-      if (errorEl && textEl) {
-        textEl.textContent = message;
-        errorEl.classList.remove('hidden');
-      }
-    }
-
-    function hideError(elementId) {
-      const errorEl = document.getElementById(elementId);
-      if (errorEl) {
-        errorEl.classList.add('hidden');
-      }
-    }
-
-    function navigateToStep(step) {
-      currentStep = step;
-      
-      // Update step buttons
-      document.querySelectorAll('.step-button').forEach((btn, i) => {
-        btn.classList.remove('active');
-        if (i + 1 === step) btn.classList.add('active');
-      });
-      
-      // Show/hide step content
-      document.getElementById('step-1').classList.toggle('hidden', step !== 1);
-      document.getElementById('step-2').classList.toggle('hidden', step !== 2);
-      document.getElementById('step-3').classList.toggle('hidden', step !== 3);
-      
-      // Update step button icons
-      updateStepButtonStates();
-    }
-
-    function updateStepButtonStates() {
-      const step2Btn = document.getElementById('step-2-btn');
-      const step3Btn = document.getElementById('step-3-btn');
-      
-      step2Btn.disabled = !currentProject.jsonPlan;
-      step3Btn.disabled = !currentProject.jsonPlan || Object.keys(currentProject.characterImages).length === 0;
-      
-      // Update icons based on state
-      const step2Icon = step2Btn.querySelector('.w-8');
-      const step3Icon = step3Btn.querySelector('.w-8');
-      
-      if (currentProject.jsonPlan) {
-        step2Icon.classList.remove('bg-gray-100');
-        step2Icon.classList.add('bg-green-100');
-        step2Icon.querySelector('i').classList.remove('text-gray-400');
-        step2Icon.querySelector('i').classList.add('text-green-600');
-      }
-      
-      if (Object.keys(currentProject.characterImages).length > 0) {
-        step3Icon.classList.remove('bg-gray-100');
-        step3Icon.classList.add('bg-green-100');
-        step3Icon.querySelector('i').classList.remove('text-gray-400');
-        step3Icon.querySelector('i').classList.add('text-green-600');
-      }
-    }
-
-    // ====== RENDER FUNCTIONS ======
-    function renderStep2() {
-      if (!currentProject.jsonPlan) return;
-      
-      const plan = currentProject.jsonPlan;
-      
-      // Set title and style
-      document.getElementById('comic-title-input').value = plan.title || '';
-      document.getElementById('global-style-input').value = plan.globalStyle || '';
-      
-      // Render characters
-      renderCharacters();
-      
-      // Render pages
-      renderPages();
-    }
-
-    function renderCharacters() {
-      const container = document.getElementById('characters-container');
-      const characters = currentProject.jsonPlan?.characters || [];
-      
-      container.innerHTML = characters.map((char, index) => `
-        <div class="character-card bg-gray-50 rounded-xl p-4 border border-gray-200" data-index="${index}">
-          <div class="aspect-square bg-gray-200 rounded-lg mb-3 overflow-hidden relative">
-            ${currentProject.characterImages[char.name] 
-              ? `<img src="${currentProject.characterImages[char.name]}" alt="${char.name}" class="w-full h-full object-cover">`
-              : `<div class="w-full h-full flex items-center justify-center text-gray-400">
-                  <i data-lucide="user" class="w-12 h-12"></i>
-                </div>`
-            }
-            <button 
-              onclick="editCharacterImage(${index})"
-              class="absolute bottom-2 left-2 bg-white/90 hover:bg-white p-2 rounded-lg shadow-sm transition-all"
-              title="ערוך תמונה"
-            >
-              <i data-lucide="edit-3" class="w-4 h-4 text-gray-600"></i>
-            </button>
-          </div>
-          <h4 class="font-semibold text-gray-800">${char.name}</h4>
-          <p class="text-sm text-gray-500 mt-1 line-clamp-2">${char.description}</p>
-          <button 
-            onclick="regenerateCharacter(${index})"
-            class="mt-3 w-full bg-white hover:bg-gray-100 text-gray-600 text-sm py-2 px-3 rounded-lg border border-gray-200 flex items-center justify-center gap-2"
-          >
-            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-            <span>צור מחדש</span>
-          </button>
-        </div>
-      `).join('');
-      
-      lucide.createIcons();
-      updateCharactersStatus();
-    }
-
-    function updateCharactersStatus() {
-      const characters = currentProject.jsonPlan?.characters || [];
-      const generatedCount = Object.keys(currentProject.characterImages).length;
-      const statusEl = document.getElementById('characters-status');
-      statusEl.textContent = `${generatedCount} מתוך ${characters.length} דמויות מוכנות`;
-    }
-
-    function renderPages() {
-      const container = document.getElementById('pages-container');
-      const pages = currentProject.jsonPlan?.pages || [];
-      
-      container.innerHTML = pages.map((page, index) => `
-        <div class="bg-gray-50 rounded-xl p-4 border border-gray-200" data-page-index="${index}">
-          <div class="flex items-center justify-between mb-4">
-            <h4 class="font-semibold text-gray-800 flex items-center gap-2">
-              <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-sm">עמוד ${page.pageNumber}</span>
-            </h4>
-            <button 
-              onclick="removePage(${index})"
-              class="text-gray-400 hover:text-red-500 p-1"
-              title="הסר עמוד"
-            >
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          </div>
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">תיאור הסצנה</label>
-              <textarea 
-                onchange="updatePageField(${index}, 'sceneDescription', this.value)"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:border-blue-500"
-              >${page.sceneDescription || ''}</textarea>
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-l border-slate-200 flex flex-col shadow-sm z-10">
+            <div class="p-6 border-b border-slate-100">
+                <h2 class="text-2xl font-bold text-blue-600 flex items-center gap-2">
+                    <i data-lucide="book-open"></i> Panalix
+                </h2>
             </div>
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">הצעת קומפוזיציה</label>
-              <textarea 
-                onchange="updatePageField(${index}, 'compositionSuggestion', this.value)"
-                rows="3"
-                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:border-blue-500"
-              >${page.compositionSuggestion || ''}</textarea>
+            <nav class="flex-1 p-4 space-y-2">
+                <button onclick="navigateTo(1)" id="nav-step-1" class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg bg-blue-50 text-blue-700">
+                    <i data-lucide="pen-tool"></i> תכנון הסיפור
+                </button>
+                <button onclick="navigateTo(2)" id="nav-step-2" disabled class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i data-lucide="check-square"></i> אישור ועריכה
+                </button>
+                <button onclick="navigateTo(3)" id="nav-step-3" disabled class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i data-lucide="image"></i> יצירת הקומיקס
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-slate-100">
+                <button onclick="openKeyModal()" class="w-full flex items-center gap-2 text-sm text-slate-600 hover:text-blue-600 mb-3 transition">
+                    <i data-lucide="key"></i> ניהול מפתחות
+                </button>
+                <button onclick="logout()" class="w-full flex items-center gap-2 text-sm text-red-500 hover:text-red-700 transition">
+                    <i data-lucide="log-out"></i> יציאה ומחיקת נתונים
+                </button>
             </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-8 relative">
             
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">רגש מוצע</label>
-              <input 
-                type="text"
-                value="${page.suggestedEmotion || ''}"
-                onchange="updatePageField(${index}, 'suggestedEmotion', this.value)"
-                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500"
-              >
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">קריינות</label>
-              <input 
-                type="text"
-                value="${page.narration || ''}"
-                onchange="updatePageField(${index}, 'narration', this.value)"
-                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500"
-              >
-            </div>
-          </div>
-          
-          <div class="mt-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">דיאלוגים</label>
-            <div class="space-y-2" id="dialogues-${index}">
-              ${(page.dialogue || []).map((d, di) => `
-                <div class="flex gap-2 items-start bg-white p-2 rounded-lg border border-gray-100">
-                  <input 
-                    type="text"
-                    value="${d.character}"
-                    onchange="updateDialogue(${index}, ${di}, 'character', this.value)"
-                    placeholder="דמות"
-                    class="w-24 px-2 py-1 border border-gray-200 rounded text-sm"
-                  >
-                  <select 
-                    onchange="updateDialogue(${index}, ${di}, 'type', this.value)"
-                    class="w-20 px-2 py-1 border border-gray-200 rounded text-sm"
-                  >
-                    <option value="speech" ${d.type === 'speech' ? 'selected' : ''}>דיבור</option>
-                    <option value="thought" ${d.type === 'thought' ? 'selected' : ''}>מחשבה</option>
-                    <option value="shout" ${d.type === 'shout' ? 'selected' : ''}>צעקה</option>
-                  </select>
-                  <input 
-                    type="text"
-                    value="${d.text}"
-                    onchange="updateDialogue(${index}, ${di}, 'text', this.value)"
-                    placeholder="טקסט"
-                    class="flex-1 px-2 py-1 border border-gray-200 rounded text-sm"
-                  >
-                  <button onclick="removeDialogue(${index}, ${di})" class="text-gray-400 hover:text-red-500 p-1">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                  </button>
+            <!-- Step 1: Story Input -->
+            <div id="step-1-content" class="max-w-3xl mx-auto fade-in">
+                <h2 class="text-2xl font-bold mb-4 text-slate-800">שלב 1: הרעיון שלך</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">תאר את הסיפור לקומיקס</label>
+                    <textarea id="story-input" class="w-full h-64 p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none" placeholder="למשל: ילד צעיר מוצא שעון עתיק בעליית הגג שמסוגל לעצור את הזמן..."></textarea>
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="generatePlan()" id="generate-plan-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition flex items-center gap-2">
+                            <i data-lucide="wand-2"></i> צור תוכנית קומיקס
+                        </button>
+                    </div>
                 </div>
-              `).join('')}
+                <!-- Loading Indicator Step 1 -->
+                <div id="loader-step-1" class="hidden mt-8 text-center">
+                    <div class="loader mx-auto mb-2"></div>
+                    <p class="text-slate-500">המתכנן עובד על התסריט...</p>
+                </div>
             </div>
-            <button 
-              onclick="addDialogue(${index})"
-              class="mt-2 text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1"
-            >
-              <i data-lucide="plus" class="w-3 h-3"></i>
-              <span>הוסף דיאלוג</span>
-            </button>
-          </div>
-        </div>
-      `).join('');
-      
-      lucide.createIcons();
-    }
 
-    function renderGeneratedPages() {
-      const container = document.getElementById('generated-pages-container');
-      
-      container.innerHTML = currentProject.generatedPages.map((pageData, index) => `
-        <div class="bg-white rounded-xl card-shadow overflow-hidden">
-          <div class="aspect-[3/4] bg-gray-100 relative">
-            ${pageData 
-              ? `<img src="${pageData}" alt="עמוד ${index + 1}" class="w-full h-full object-contain">`
-              : `<div class="w-full h-full flex items-center justify-center">
-                  <div class="loader"></div>
-                </div>`
+            <!-- Step 2: Approval & Edit -->
+            <div id="step-2-content" class="hidden max-w-5xl mx-auto fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">שלב 2: תכנון ודמויות</h2>
+                    <div class="flex gap-2">
+                         <button onclick="askForImprovements()" class="text-blue-600 hover:bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium transition border border-blue-200">
+                            <i data-lucide="sparkles" class="inline w-4 h-4 ml-1"></i> הצעות שיפור
+                        </button>
+                        <button onclick="approveAndStart()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-bold shadow transition flex items-center gap-2">
+                            אשר והתחל ייצור <i data-lucide="arrow-left"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Global Settings -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">כותרת הקומיקס</label>
+                            <input type="text" id="plan-title" class="w-full font-bold text-xl border-b border-slate-300 focus:border-blue-500 focus:outline-none py-1" onchange="updatePlanField('title', this.value)">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">סגנון אומנותי</label>
+                            <input type="text" id="plan-style" class="w-full text-slate-700 border-b border-slate-300 focus:border-blue-500 focus:outline-none py-1" onchange="updatePlanField('globalStyle', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Characters Section -->
+                <h3 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <i data-lucide="users"></i> דמויות
+                    <button onclick="generateAllCharacters()" id="gen-chars-btn" class="mr-auto text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition">
+                        צור תמונות דמויות
+                    </button>
+                </h3>
+                <div id="characters-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    <!-- Characters injected here -->
+                </div>
+
+                <!-- Pages Editor -->
+                <h3 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <i data-lucide="layers"></i> עמודים וסצנות
+                </h3>
+                <div id="pages-container" class="space-y-6">
+                    <!-- Pages injected here -->
+                </div>
+            </div>
+
+            <!-- Step 3: Generation -->
+            <div id="step-3-content" class="hidden max-w-5xl mx-auto fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">שלב 3: הקומיקס המוכן</h2>
+                    <div class="flex gap-2">
+                        <button onclick="exportProject('pdf')" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
+                            <i data-lucide="file-text"></i> ייצא PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div id="generation-progress-container" class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 hidden">
+                    <div class="flex justify-between text-sm text-slate-600 mb-2">
+                        <span id="progress-text">יוצר עמוד 1...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Comic Grid -->
+                <div id="comic-grid" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Generated pages injected here -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+
+    <!-- Key Management Modal -->
+    <div id="key-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 m-4">
+            <h3 class="text-xl font-bold mb-4">ניהול מפתחות API</h3>
+            <p class="text-sm text-slate-500 mb-4">הוסף מפתחות גיבוי למקרה שמפתח ראשי יגיע למגבלת שימוש.</p>
+            <textarea id="backup-keys-input" class="w-full h-32 p-3 border border-slate-300 rounded-lg text-sm font-mono mb-4" placeholder="הדבק מפתחות נוספים כאן (מופרדים בפסיק או בשורה חדשה)"></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('key-modal')" class="text-slate-500 hover:bg-slate-100 px-4 py-2 rounded-lg">ביטול</button>
+                <button onclick="saveBackupKeys()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">שמור מפתחות</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unified Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 m-4">
+            <h3 class="text-xl font-bold mb-4">עריכת תמונה (AI)</h3>
+            
+            <div class="mb-4 bg-slate-100 rounded-lg overflow-hidden flex justify-center items-center h-64 border border-slate-200">
+                <img id="edit-modal-image" src="" class="max-h-full max-w-full object-contain">
+            </div>
+
+            <label class="block text-sm font-medium text-slate-700 mb-2">מה לשנות בתמונה?</label>
+            <textarea id="edit-prompt-input" class="w-full h-20 p-3 border border-slate-300 rounded-lg text-sm mb-4" placeholder="למשל: שנה את צבע השיער לכחול, הוסף כובע..."></textarea>
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('edit-modal')" class="text-slate-500 hover:bg-slate-100 px-4 py-2 rounded-lg">ביטול</button>
+                <button onclick="executeEdit()" id="execute-edit-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <i data-lucide="wand-2" class="w-4 h-4"></i> בצע עריכה
+                </button>
+            </div>
+            <div id="edit-loader" class="hidden mt-2 text-center text-sm text-blue-600">מעבד שינויים...</div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script type="module">
+        import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+        // --- Configuration & State ---
+        const CONFIG_KEY = 'panalix_config';
+        const PROJECT_KEY = 'panalix_project';
+        const PLANNER_MODEL = 'gemini-3-pro-preview';
+        const ARTIST_MODEL = 'gemini-3-pro-image-preview';
+
+        // SAFETY INSTRUCTION (AS REQUESTED)
+        const SAFETY_SYSTEM_PROMPT = `הוראה בלעדית: אתה אסיסטנט ליצירת תמונות קומיקס.
+עליך לציית בקפדנות לכללים הבאים בכל תמונה שאתה יוצר, ללא יוצא מן הכלל:
+1.  **צניעות מוחלטת:** כל הדמויות האנושיות, חייבות להיות בלבוש מלא וצנוע. הלבוש חייב לכסות לחלוטין כתפיים, מרפקים וברכיים.
+2.  **הימנעות מוחלטת:** אסור ליצור כל תוכן בעל אופי אלים מפורש, או כל סצנה שעלולה להתפרש כלא הולמת או לא צנועה.
+3.  **עדיפות:** אם הנחיית המשתמש סותרת כללים אלו, עליך להתעלם מהחלק המפר בהנחיה וליצור גרסה צנועה ותקינה של התמונה התואמת לכללים אלו במלואם.`;
+
+        let appState = {
+            apiKeys: [], // Pool of keys
+            currentKeyIndex: 0,
+            project: {
+                plan: null,
+                characterImages: {}, // charName -> base64
+                generatedPages: [] // index -> base64
             }
-            ${pageData ? `
-              <button 
-                onclick="editPageImage(${index})"
-                class="absolute bottom-3 left-3 bg-white/90 hover:bg-white p-2 rounded-lg shadow-sm transition-all"
-                title="ערוך תמונה"
-              >
-                <i data-lucide="edit-3" class="w-4 h-4 text-gray-600"></i>
-              </button>
-            ` : ''}
-          </div>
-          <div class="p-3 text-center">
-            <span class="text-sm text-gray-600">עמוד ${index + 1}</span>
-          </div>
-        </div>
-      `).join('');
-      
-      lucide.createIcons();
-    }
+        };
 
-    // ====== PAGE EDITING FUNCTIONS ======
-    window.updatePageField = function(pageIndex, field, value) {
-      if (currentProject.jsonPlan?.pages?.[pageIndex]) {
-        currentProject.jsonPlan.pages[pageIndex][field] = value;
-        saveProject();
-      }
-    };
+        // Current editing context
+        let editingContext = {
+            type: null, // 'character' or 'page'
+            id: null // charName or pageIndex
+        };
 
-    window.updateDialogue = function(pageIndex, dialogueIndex, field, value) {
-      if (currentProject.jsonPlan?.pages?.[pageIndex]?.dialogue?.[dialogueIndex]) {
-        currentProject.jsonPlan.pages[pageIndex].dialogue[dialogueIndex][field] = value;
-        saveProject();
-      }
-    };
-
-    window.addDialogue = function(pageIndex) {
-      if (currentProject.jsonPlan?.pages?.[pageIndex]) {
-        if (!currentProject.jsonPlan.pages[pageIndex].dialogue) {
-          currentProject.jsonPlan.pages[pageIndex].dialogue = [];
-        }
-        currentProject.jsonPlan.pages[pageIndex].dialogue.push({
-          character: '',
-          type: 'speech',
-          text: ''
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            loadState();
+            checkAuth();
         });
-        saveProject();
-        renderPages();
-      }
-    };
 
-    window.removeDialogue = function(pageIndex, dialogueIndex) {
-      if (currentProject.jsonPlan?.pages?.[pageIndex]?.dialogue) {
-        currentProject.jsonPlan.pages[pageIndex].dialogue.splice(dialogueIndex, 1);
-        saveProject();
-        renderPages();
-      }
-    };
-
-    window.removePage = function(pageIndex) {
-      if (currentProject.jsonPlan?.pages && confirm('האם אתה בטוח שברצונך להסיר עמוד זה?')) {
-        currentProject.jsonPlan.pages.splice(pageIndex, 1);
-        // Renumber pages
-        currentProject.jsonPlan.pages.forEach((p, i) => p.pageNumber = i + 1);
-        saveProject();
-        renderPages();
-      }
-    };
-
-    // ====== CHARACTER FUNCTIONS ======
-    window.regenerateCharacter = async function(index) {
-      const character = currentProject.jsonPlan?.characters?.[index];
-      if (!character) return;
-      
-      showLoading(`יוצר תמונה עבור ${character.name}...`);
-      
-      try {
-        const prompt = `צור תמונת ייחוס (reference image) של דמות בשם "${character.name}".
-תיאור הדמות: ${character.description}
-סגנון: ${currentProject.jsonPlan.globalStyle}
-הדמות צריכה להיות מוצגת בבירור, על רקע ניטרלי.`;
-        
-        const imageData = await callArtistModel(prompt);
-        currentProject.characterImages[character.name] = imageData;
-        saveProject();
-        renderCharacters();
-      } catch (error) {
-        alert('שגיאה ביצירת התמונה: ' + error.message);
-      } finally {
-        hideLoading();
-      }
-    };
-
-    window.editCharacterImage = function(index) {
-      const character = currentProject.jsonPlan?.characters?.[index];
-      if (!character || !currentProject.characterImages[character.name]) {
-        alert('יש ליצור תמונה לדמות לפני עריכה');
-        return;
-      }
-      
-      editingTarget = { type: 'character', index, name: character.name };
-      document.getElementById('edit-modal-image').src = currentProject.characterImages[character.name];
-      document.getElementById('edit-prompt-input').value = '';
-      hideError('edit-error');
-      document.getElementById('edit-modal').classList.remove('hidden');
-    };
-
-    window.editPageImage = function(index) {
-      if (!currentProject.generatedPages[index]) {
-        return;
-      }
-      
-      editingTarget = { type: 'page', index };
-      document.getElementById('edit-modal-image').src = currentProject.generatedPages[index];
-      document.getElementById('edit-prompt-input').value = '';
-      hideError('edit-error');
-      document.getElementById('edit-modal').classList.remove('hidden');
-    };
-
-    window.closeEditModal = function() {
-      document.getElementById('edit-modal').classList.add('hidden');
-      editingTarget = null;
-    };
-
-    // ====== KEYS MODAL ======
-    window.closeKeysModal = function() {
-      document.getElementById('keys-modal').classList.add('hidden');
-    };
-
-    function showKeysModal() {
-      renderKeysList();
-      document.getElementById('keys-modal').classList.remove('hidden');
-    }
-
-    function renderKeysList() {
-      const container = document.getElementById('active-keys-list');
-      container.innerHTML = apiKeyPool.map((key, index) => `
-        <div class="flex items-center justify-between bg-gray-50 p-2 rounded-lg">
-          <span class="text-sm text-gray-600 font-mono">${key.substring(0, 10)}...${key.substring(key.length - 4)}</span>
-          <div class="flex items-center gap-2">
-            ${index === currentKeyIndex ? '<span class="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded">פעיל</span>' : ''}
-            <button onclick="removeApiKey(${index})" class="text-gray-400 hover:text-red-500 p-1" ${apiKeyPool.length <= 1 ? 'disabled' : ''}>
-              <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-      lucide.createIcons();
-    }
-
-    window.removeApiKey = function(index) {
-      if (apiKeyPool.length <= 1) return;
-      apiKeyPool.splice(index, 1);
-      if (currentKeyIndex >= apiKeyPool.length) {
-        currentKeyIndex = 0;
-      }
-      saveToStorage('api_keys', apiKeyPool);
-      updateKeyCountDisplay();
-      renderKeysList();
-    };
-
-    // ====== PROJECT MANAGEMENT ======
-    function saveProject() {
-      saveToStorage('current_project', currentProject);
-    }
-
-    function loadProject() {
-      const saved = loadFromStorage('current_project');
-      if (saved) {
-        currentProject = saved;
-      }
-    }
-
-    // ====== GENERATION LOGIC ======
-    async function generateAllCharacters() {
-      const characters = currentProject.jsonPlan?.characters || [];
-      
-      for (let i = 0; i < characters.length; i++) {
-        const char = characters[i];
-        if (currentProject.characterImages[char.name]) continue; // Skip if already generated
-        
-        showLoading(`יוצר תמונת ייחוס עבור ${char.name} (${i + 1}/${characters.length})...`);
-        
-        try {
-          const prompt = `צור תמונת ייחוס (reference image) של דמות בשם "${char.name}".
-תיאור הדמות: ${char.description}
-סגנון: ${currentProject.jsonPlan.globalStyle}
-הדמות צריכה להיות מוצגת בבירור, על רקע ניטרלי.`;
-          
-          const imageData = await callArtistModel(prompt);
-          currentProject.characterImages[char.name] = imageData;
-          saveProject();
-          renderCharacters();
-        } catch (error) {
-          console.error(`Failed to generate character ${char.name}:`, error);
-          // Continue with other characters
+        // --- Storage Helpers ---
+        function saveState() {
+            localStorage.setItem(CONFIG_KEY, JSON.stringify({
+                apiKeys: appState.apiKeys,
+                currentKeyIndex: appState.currentKeyIndex
+            }));
+            localStorage.setItem(PROJECT_KEY, JSON.stringify(appState.project));
         }
-      }
-      
-      hideLoading();
-    }
 
-    async function generateComicPages() {
-      const pages = currentProject.jsonPlan?.pages || [];
-      currentProject.generatedPages = new Array(pages.length).fill(null);
-      renderGeneratedPages();
-      
-      const progressBar = document.getElementById('progress-bar');
-      const progressText = document.getElementById('progress-text');
-      
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
-        progressText.textContent = `עמוד ${i + 1} מתוך ${pages.length}`;
-        progressBar.style.width = `${((i) / pages.length) * 100}%`;
-        
-        try {
-          // Build prompt with character references
-          let prompt = `צור עמוד קומיקס בסגנון: ${currentProject.jsonPlan.globalStyle}
-
-תיאור הסצנה: ${page.sceneDescription}
-הצעת קומפוזיציה: ${page.compositionSuggestion || 'לפי שיקול דעתך'}
-הרגש המרכזי: ${page.suggestedEmotion || 'ניטרלי'}`;
-
-          if (page.dialogue?.length > 0) {
-            prompt += `\n\nדיאלוגים להציג בבועות דיבור:`;
-            page.dialogue.forEach(d => {
-              prompt += `\n- ${d.character} (${d.type === 'speech' ? 'אומר' : d.type === 'thought' ? 'חושב' : 'צועק'}): "${d.text}"`;
-            });
-          }
-
-          if (page.narration) {
-            prompt += `\n\nטקסט קריינות (בתיבה מרובעת): "${page.narration}"`;
-          }
-
-          // Find character images to include
-          const mentionedCharacters = [];
-          const characters = currentProject.jsonPlan?.characters || [];
-          
-          for (const char of characters) {
-            if (page.sceneDescription?.includes(char.name) || 
-                page.dialogue?.some(d => d.character === char.name)) {
-              if (currentProject.characterImages[char.name]) {
-                mentionedCharacters.push(char.name);
-              }
+        function loadState() {
+            const config = localStorage.getItem(CONFIG_KEY);
+            const project = localStorage.getItem(PROJECT_KEY);
+            
+            if (config) {
+                const parsed = JSON.parse(config);
+                appState.apiKeys = parsed.apiKeys || [];
+                appState.currentKeyIndex = parsed.currentKeyIndex || 0;
             }
-          }
-
-          let imageData;
-          if (mentionedCharacters.length > 0) {
-            // Use first character's reference image
-            const refImage = currentProject.characterImages[mentionedCharacters[0]];
-            prompt += `\n\nהשתמש בתמונת הייחוס המצורפת כדמות הראשית והקפד על עקביות.`;
-            imageData = await callArtistModel(prompt, refImage);
-          } else {
-            imageData = await callArtistModel(prompt);
-          }
-          
-          currentProject.generatedPages[i] = imageData;
-          saveProject();
-          renderGeneratedPages();
-          
-        } catch (error) {
-          console.error(`Failed to generate page ${i + 1}:`, error);
-          currentProject.generatedPages[i] = null;
+            if (project) {
+                appState.project = JSON.parse(project);
+            }
         }
+
+        function clearData() {
+            localStorage.removeItem(CONFIG_KEY);
+            localStorage.removeItem(PROJECT_KEY);
+            location.reload();
+        }
+        window.logout = clearData; // Expose to global
+
+        // --- Navigation ---
+        function checkAuth() {
+            if (appState.apiKeys.length === 0) {
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+            } else {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                restoreSession();
+            }
+        }
+
+        function restoreSession() {
+            if (appState.project.plan) {
+                document.getElementById('nav-step-2').disabled = false;
+                renderPlan();
+                if (appState.project.generatedPages.length > 0) {
+                    document.getElementById('nav-step-3').disabled = false;
+                    renderGeneratedGallery();
+                }
+                // Navigate to latest available step
+                if (appState.project.generatedPages.length > 0) navigateTo(3);
+                else navigateTo(2);
+            } else {
+                navigateTo(1);
+            }
+        }
+
+        window.navigateTo = function(step) {
+            // Hide all
+            document.getElementById('step-1-content').classList.add('hidden');
+            document.getElementById('step-2-content').classList.add('hidden');
+            document.getElementById('step-3-content').classList.add('hidden');
+            
+            // Show active
+            document.getElementById(`step-${step}-content`).classList.remove('hidden');
+            
+            // Update sidebar styles
+            [1, 2, 3].forEach(i => {
+                const btn = document.getElementById(`nav-step-${i}`);
+                if (i === step) {
+                    btn.classList.add('bg-blue-50', 'text-blue-700');
+                    btn.classList.remove('text-slate-500');
+                } else {
+                    btn.classList.remove('bg-blue-50', 'text-blue-700');
+                    btn.classList.add('text-slate-500');
+                }
+            });
+        };
+
+        // --- API & Key Management ---
+        window.handleLogin = async function() {
+            const input = document.getElementById('api-key-input');
+            const errorMsg = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn');
+            const key = input.value.trim();
+
+            if (!key) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loader w-6 h-6 border-white border-t-transparent"></div>';
+            errorMsg.classList.add('hidden');
+
+            try {
+                // Ping to validate
+                const isValid = await validateKey(key);
+                if (isValid) {
+                    appState.apiKeys = [key];
+                    saveState();
+                    checkAuth();
+                } else {
+                    throw new Error('המפתח אינו תקין');
+                }
+            } catch (e) {
+                errorMsg.textContent = 'שגיאה: המפתח אינו תקין או שאינו תומך במודלים הנדרשים.';
+                errorMsg.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>שמור והתחל</span><i data-lucide="arrow-left"></i>';
+                lucide.createIcons();
+            }
+        };
+
+        async function validateKey(key) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${PLANNER_MODEL}:generateContent?key=${key}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: "test" }] }] })
+            });
+            return response.ok;
+        }
+
+        // Core Fetch with Retry Logic
+        async function fetchWithRetry(model, payload) {
+            let attempts = 0;
+            const maxAttempts = appState.apiKeys.length;
+
+            while (attempts < maxAttempts) {
+                const currentKey = appState.apiKeys[appState.currentKeyIndex];
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429 || response.status >= 500) {
+                        // Switch key and retry
+                        console.warn(`Key failed (${response.status}), switching...`);
+                        appState.currentKeyIndex = (appState.currentKeyIndex + 1) % appState.apiKeys.length;
+                        saveState();
+                        attempts++;
+                        continue; 
+                    }
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error?.message || 'API Error');
+                    }
+
+                    return await response.json();
+
+                } catch (e) {
+                    console.error("Fetch error:", e);
+                    // Network errors also trigger retry logic if possible, 
+                    // but usually we want to break if it's not a key issue.
+                    // For simplicity, we assume fetch errors might be transient or key related.
+                    attempts++;
+                    if (attempts >= maxAttempts) throw e;
+                }
+            }
+            
+            // If we are here, all keys failed.
+            openKeyModal();
+            throw new Error('All keys exhausted or invalid.');
+        }
+
+        // --- Logic: Step 1 (Planner) ---
+        window.generatePlan = async function() {
+            const prompt = document.getElementById('story-input').value;
+            if (!prompt) return;
+
+            const btn = document.getElementById('generate-plan-btn');
+            const loader = document.getElementById('loader-step-1');
+            
+            btn.classList.add('hidden');
+            loader.classList.remove('hidden');
+
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    title: { type: "STRING" },
+                    globalStyle: { type: "STRING" },
+                    characters: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                name: { type: "STRING" },
+                                description: { type: "STRING" }
+                            },
+                            required: ["name", "description"]
+                        }
+                    },
+                    pages: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                pageNumber: { type: "INTEGER" },
+                                sceneDescription: { type: "STRING" },
+                                compositionSuggestion: { type: "STRING" },
+                                suggestedEmotion: { type: "STRING" },
+                                narration: { type: "STRING" },
+                                dialogue: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            character: { type: "STRING" },
+                                            type: { type: "STRING" },
+                                            text: { type: "STRING" }
+                                        }
+                                    }
+                                }
+                            },
+                            required: ["pageNumber", "sceneDescription"]
+                        }
+                    }
+                },
+                required: ["title", "globalStyle", "characters", "pages"]
+            };
+
+            const systemInstruction = `You are a professional comic book planner. 
+            Create a structured plan in JSON.
+            IMPORTANT: Output ONLY valid JSON.
+            Language: Hebrew (unless the story is English).`;
+
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: `Create a comic plan for this story: ${prompt}` }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: schema
+                    }
+                };
+
+                const data = await fetchWithRetry(PLANNER_MODEL, payload);
+                const text = data.candidates[0].content.parts[0].text;
+                appState.project.plan = JSON.parse(text);
+                appState.project.characterImages = {}; // Reset images on new plan
+                appState.project.generatedPages = [];
+                saveState();
+                
+                document.getElementById('nav-step-2').disabled = false;
+                navigateTo(2);
+                renderPlan();
+
+            } catch (e) {
+                alert('שגיאה ביצירת התוכנית: ' + e.message);
+            } finally {
+                btn.classList.remove('hidden');
+                loader.classList.add('hidden');
+            }
+        };
+
+        window.askForImprovements = async function() {
+            // Similar to generatePlan but feeds current JSON back
+            const btn = document.querySelector('button[onclick="askForImprovements()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader w-4 h-4 border-blue-600 border-t-transparent"></div>';
+            
+            try {
+                const currentPlan = appState.project.plan;
+                const prompt = "Improve this comic plan to be more dramatic and visually interesting. Keep the JSON structure exactly the same.";
+                
+                // We construct a chat-like history or just append the JSON
+                const payload = {
+                    contents: [
+                        { role: "user", parts: [{ text: "Original Plan JSON: " + JSON.stringify(currentPlan) }] },
+                        { role: "user", parts: [{ text: prompt }] }
+                    ],
+                    generationConfig: { responseMimeType: "application/json" }
+                };
+
+                const data = await fetchWithRetry(PLANNER_MODEL, payload);
+                const text = data.candidates[0].content.parts[0].text;
+                appState.project.plan = JSON.parse(text);
+                saveState();
+                renderPlan();
+                alert("התוכנית עודכנה בהצלחה!");
+
+            } catch (e) {
+                alert('שגיאה בשיפור התוכנית: ' + e.message);
+            } finally {
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            }
+        };
+
+        // --- Logic: Step 2 (Render & Edit) ---
+        function renderPlan() {
+            const plan = appState.project.plan;
+            if (!plan) return;
+
+            document.getElementById('plan-title').value = plan.title;
+            document.getElementById('plan-style').value = plan.globalStyle;
+
+            // Characters
+            const charContainer = document.getElementById('characters-grid');
+            charContainer.innerHTML = '';
+            plan.characters.forEach((char, idx) => {
+                const hasImg = appState.project.characterImages[char.name];
+                charContainer.innerHTML += `
+                    <div class="bg-white p-4 rounded-lg shadow border border-slate-100 flex flex-col h-full">
+                        <div class="h-48 bg-slate-100 rounded mb-3 flex items-center justify-center overflow-hidden border border-slate-200 relative">
+                            ${hasImg 
+                                ? `<img src="${hasImg}" class="w-full h-full object-cover">` 
+                                : `<span class="text-slate-400 text-sm">טרם נוצר</span>`}
+                            ${hasImg ? `
+                                <button onclick="openEditModal('character', '${char.name}')" class="absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow hover:bg-white text-blue-600 transition">
+                                    <i data-lucide="edit-2" class="w-4 h-4"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                        <h4 class="font-bold text-lg">${char.name}</h4>
+                        <textarea class="text-sm text-slate-600 flex-1 w-full border-transparent hover:border-slate-200 border rounded resize-none focus:outline-none focus:border-blue-300 p-1" 
+                            onchange="updateCharDesc(${idx}, this.value)">${char.description}</textarea>
+                    </div>
+                `;
+            });
+
+            // Pages
+            const pagesContainer = document.getElementById('pages-container');
+            pagesContainer.innerHTML = '';
+            plan.pages.forEach((page, idx) => {
+                // Format Dialogue for display/edit
+                const dialogueStr = page.dialogue ? page.dialogue.map(d => `${d.character}: ${d.text}`).join('\n') : '';
+
+                pagesContainer.innerHTML += `
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative group">
+                        <div class="absolute -left-3 -top-3 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shadow">
+                            ${page.pageNumber}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <div>
+                                <label class="text-xs font-bold text-slate-400 uppercase">תיאור סצנה</label>
+                                <textarea class="w-full text-sm border-slate-200 rounded p-2 border focus:ring-1 focus:ring-blue-500 min-h-[80px]" onchange="updatePageField(${idx}, 'sceneDescription', this.value)">${page.sceneDescription}</textarea>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-400 uppercase">הצעה לקומפוזיציה</label>
+                                <textarea class="w-full text-sm border-slate-200 rounded p-2 border focus:ring-1 focus:ring-blue-500 min-h-[80px]" onchange="updatePageField(${idx}, 'compositionSuggestion', this.value)">${page.compositionSuggestion || ''}</textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="text-xs font-bold text-slate-400 uppercase">דיאלוג (דמות: טקסט)</label>
+                                <textarea class="w-full text-sm border-slate-200 rounded p-2 border focus:ring-1 focus:ring-blue-500 bg-slate-50 min-h-[60px]" onchange="updatePageDialogue(${idx}, this.value)">${dialogueStr}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            lucide.createIcons();
+        }
+
+        // Data Update Helpers
+        window.updatePlanField = (key, val) => { appState.project.plan[key] = val; saveState(); };
+        window.updateCharDesc = (idx, val) => { appState.project.plan.characters[idx].description = val; saveState(); };
+        window.updatePageField = (idx, key, val) => { appState.project.plan.pages[idx][key] = val; saveState(); };
+        window.updatePageDialogue = (idx, rawText) => {
+            // Parse simplistic text back to object
+            const lines = rawText.split('\n');
+            const newDiag = lines.map(line => {
+                const parts = line.split(':');
+                if (parts.length < 2) return null;
+                return { character: parts[0].trim(), type: "speech", text: parts.slice(1).join(':').trim() };
+            }).filter(x => x);
+            appState.project.plan.pages[idx].dialogue = newDiag;
+            saveState();
+        };
+
+        // --- Character Generation ---
+        window.generateAllCharacters = async function() {
+            const btn = document.getElementById('gen-chars-btn');
+            btn.disabled = true;
+            btn.textContent = 'יוצר...';
+            
+            const chars = appState.project.plan.characters;
+            const style = appState.project.plan.globalStyle;
+
+            for (const char of chars) {
+                // Skip if exists (optional, but lets overwrite for now or maybe check)
+                const prompt = `Generate a character reference sheet. Style: ${style}. Character: ${char.name}. Description: ${char.description}. White background, full body shot.`;
+                try {
+                    const base64 = await generateImage(prompt);
+                    appState.project.characterImages[char.name] = base64;
+                    renderPlan(); // Refresh UI to show image
+                    saveState();
+                } catch (e) {
+                    console.error("Failed to gen char:", char.name, e);
+                }
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'צור תמונות דמויות';
+        };
+
+        // --- Logic: Step 3 (Final Production) ---
+        window.approveAndStart = async function() {
+            // Check keys
+            const required = appState.project.plan.pages.length;
+            const available = appState.apiKeys.length * 10; // Rough estimate of calls per key/minute
+            // Just warn if 0 keys, but we have checks elsewhere. 
+            // Real logic: We just start. The retry logic handles limits.
+            
+            navigateTo(3);
+            startProduction();
+        };
+
+        async function startProduction() {
+            const pages = appState.project.plan.pages;
+            const container = document.getElementById('comic-grid');
+            const progressContainer = document.getElementById('generation-progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const progressPercent = document.getElementById('progress-percent');
+
+            progressContainer.classList.remove('hidden');
+            container.innerHTML = ''; // Clear previous
+
+            for (let i = 0; i < pages.length; i++) {
+                const page = pages[i];
+                
+                // Update UI
+                const percent = Math.round(((i) / pages.length) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressPercent.textContent = `${percent}%`;
+                progressText.textContent = `יוצר עמוד ${page.pageNumber}...`;
+
+                // If already generated, skip logic but render
+                if (appState.project.generatedPages[i]) {
+                    renderGeneratedPage(i, appState.project.generatedPages[i]);
+                    continue;
+                }
+
+                // Construct Prompt with Refs
+                // Note: Gemini doesn't currently support multiple image inputs easily via this specific REST flow for context 
+                // in the exact way one might hope (like "here is char A, here is char B"). 
+                // We will rely on detailed description + Global Style. 
+                // ADVANCED: We could try to pass the character sheet as inlineData if the model supports it.
+                // For this implementation, we will act as the "Artist" model prompt engineer.
+                
+                let prompt = `Create a comic book panel. 
+                Style: ${appState.project.plan.globalStyle}.
+                Scene: ${page.sceneDescription}.
+                Composition: ${page.compositionSuggestion}.
+                Mood: ${page.suggestedEmotion}.`;
+
+                // Add character visual descriptions explicitly to prompt since we can't reliably inject multiple images as "training data" per shot without fine-tuning.
+                // However, we CAN inject 1 image for img2img. But here we are creating from scratch.
+                // We will append descriptions.
+                const charsInScene = appState.project.plan.characters.filter(c => 
+                    page.sceneDescription.includes(c.name) || 
+                    (page.dialogue && page.dialogue.some(d => d.character === c.name))
+                );
+
+                if (charsInScene.length > 0) {
+                    prompt += "\n\nCharacters in scene details:";
+                    charsInScene.forEach(c => {
+                        prompt += `\n- ${c.name}: ${c.description}`;
+                    });
+                }
+
+                try {
+                    const base64 = await generateImage(prompt);
+                    appState.project.generatedPages[i] = base64;
+                    saveState();
+                    renderGeneratedPage(i, base64);
+                } catch (e) {
+                    console.error(`Page ${i+1} failed`, e);
+                }
+            }
+
+            progressBar.style.width = '100%';
+            progressPercent.textContent = '100%';
+            progressText.textContent = 'הושלם!';
+            setTimeout(() => progressContainer.classList.add('hidden'), 2000);
+            document.getElementById('nav-step-3').disabled = false;
+        }
+
+        function renderGeneratedPage(idx, base64) {
+            const container = document.getElementById('comic-grid');
+            const pageData = appState.project.plan.pages[idx];
+            
+            // Build Dialogue Bubbles HTML (Overlay)
+            let bubblesHtml = '';
+            // Ideally we would position these, but for now we list them below or try to overlay simply.
+            // Let's just put them below the image for clarity in this web app format.
+            
+            const div = document.createElement('div');
+            div.className = "bg-white p-2 rounded-xl shadow border border-slate-200 relative group";
+            div.innerHTML = `
+                <div class="relative overflow-hidden rounded-lg bg-slate-100">
+                    <img src="${base64}" class="w-full h-auto object-cover">
+                    <button onclick="openEditModal('page', ${idx})" class="absolute top-2 right-2 bg-white/90 p-2 rounded-full shadow hover:bg-white text-blue-600 opacity-0 group-hover:opacity-100 transition">
+                        <i data-lucide="edit-2" class="w-4 h-4"></i>
+                    </button>
+                    <div class="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        עמוד ${pageData.pageNumber}
+                    </div>
+                </div>
+                <div class="mt-3 space-y-2">
+                    ${pageData.dialogue ? pageData.dialogue.map(d => `
+                        <div class="flex gap-2 text-sm">
+                            <span class="font-bold text-slate-700 min-w-[60px]">${d.character}:</span>
+                            <span class="bg-blue-50 text-slate-800 px-2 py-1 rounded flex-1">${d.text}</span>
+                        </div>
+                    `).join('') : ''}
+                    ${pageData.narration ? `<div class="bg-yellow-50 text-slate-700 text-xs p-2 italic border-l-4 border-yellow-400">${pageData.narration}</div>` : ''}
+                </div>
+            `;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        // --- Image Generation Core ---
+        async function generateImage(prompt, inputImageBase64 = null) {
+            // Include Safety System Prompt in the text prompt as Gemini API for images 
+            // takes system instructions differently or ignores them in standard generateContent for images.
+            // Best practice for safety compliance via prompt engineering:
+            const fullPrompt = `${SAFETY_SYSTEM_PROMPT}\n\nUser Request: ${prompt}`;
+
+            const payload = {
+                contents: [{
+                    parts: [
+                        { text: fullPrompt }
+                    ]
+                }],
+                // generationConfig can go here if needed
+            };
+
+            // If input image exists (Edit mode / Img2Img)
+            if (inputImageBase64) {
+                // Remove header if present
+                const cleanBase64 = inputImageBase64.replace(/^data:image\/(png|jpeg|webp);base64,/, "");
+                payload.contents[0].parts.push({
+                    inlineData: {
+                        mimeType: "image/png",
+                        data: cleanBase64
+                    }
+                });
+            }
+
+            const data = await fetchWithRetry(ARTIST_MODEL, payload);
+            
+            // Extract Image
+            // Response format for image gen usually involves inlineData in the candidate
+            if (data.candidates && data.candidates[0].content && data.candidates[0].content.parts) {
+                // Find the part with inlineData (image)
+                const imgPart = data.candidates[0].content.parts.find(p => p.inlineData);
+                if (imgPart) {
+                    return `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+                }
+            }
+            throw new Error("No image generated");
+        }
+
+        // --- Modals & Editing ---
+        window.openKeyModal = () => document.getElementById('key-modal').classList.remove('hidden', 'flex');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        window.saveBackupKeys = () => {
+            const txt = document.getElementById('backup-keys-input').value;
+            const newKeys = txt.split(/[\n,]+/).map(k => k.trim()).filter(k => k.length > 10);
+            if (newKeys.length > 0) {
+                appState.apiKeys.push(...newKeys);
+                saveState();
+                alert(`${newKeys.length} מפתחות נוספו בהצלחה!`);
+                closeModal('key-modal');
+                document.getElementById('backup-keys-input').value = '';
+            }
+        };
+
+        window.openEditModal = (type, id) => {
+            editingContext = { type, id };
+            const modal = document.getElementById('edit-modal');
+            const imgEl = document.getElementById('edit-modal-image');
+            
+            let currentSrc = "";
+            if (type === 'character') {
+                currentSrc = appState.project.characterImages[id];
+            } else {
+                currentSrc = appState.project.generatedPages[id];
+            }
+            
+            if (!currentSrc) return alert("אין תמונה לעריכה עדיין");
+            
+            imgEl.src = currentSrc;
+            document.getElementById('edit-prompt-input').value = '';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.executeEdit = async function() {
+            const prompt = document.getElementById('edit-prompt-input').value;
+            if (!prompt) return;
+            
+            const btn = document.getElementById('execute-edit-btn');
+            const loader = document.getElementById('edit-loader');
+            const imgEl = document.getElementById('edit-modal-image');
+            
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            
+            try {
+                // Call Artist with Image + Text
+                const newImageBase64 = await generateImage(`Edit this image: ${prompt}. Keep the same style.`, imgEl.src);
+                
+                // Save Result
+                if (editingContext.type === 'character') {
+                    appState.project.characterImages[editingContext.id] = newImageBase64;
+                    renderPlan(); // Update main view
+                } else {
+                    appState.project.generatedPages[editingContext.id] = newImageBase64;
+                    // Re-render specific page in gallery is complex, easier to just update modal image
+                }
+                
+                imgEl.src = newImageBase64;
+                saveState();
+                
+            } catch (e) {
+                alert("עריכה נכשלה: " + e.message);
+            } finally {
+                btn.disabled = false;
+                loader.classList.add('hidden');
+            }
+        };
         
-        progressBar.style.width = `${((i + 1) / pages.length) * 100}%`;
-      }
-      
-      progressText.textContent = `הושלם! ${pages.length} מתוך ${pages.length} עמודים`;
-      document.getElementById('export-buttons').classList.remove('hidden');
-    }
+        // --- Export ---
+        window.exportProject = (type) => {
+            if (type === 'pdf') {
+                alert("ייצוא ל-PDF יוריד כעת את הקומיקס (הדמיה)");
+                window.print(); // Simple PDF export via browser print
+            }
+        };
 
-    // ====== EVENT LISTENERS ======
-    function setupEventListeners() {
-      // Login
-      document.getElementById('save-key-btn').addEventListener('click', async () => {
-        const keyInput = document.getElementById('api-key-input');
-        const key = keyInput.value.trim();
-        
-        if (!key) {
-          showError('login-error', 'נא להזין מפתח API');
-          return;
-        }
-        
-        showLoading('מאמת מפתח API...');
-        hideError('login-error');
-        
-        const result = await validateApiKey(key);
-        hideLoading();
-        
-        if (result.valid) {
-          apiKeyPool = [key];
-          currentKeyIndex = 0;
-          saveToStorage('api_keys', apiKeyPool);
-          showMainApp();
-        } else {
-          showError('login-error', `המפתח שהוזן אינו תקין: ${result.error}`);
-        }
-      });
-
-      // Step navigation
-      document.getElementById('step-1-btn').addEventListener('click', () => navigateToStep(1));
-      document.getElementById('step-2-btn').addEventListener('click', () => {
-        if (currentProject.jsonPlan) {
-          navigateToStep(2);
-          renderStep2();
-        }
-      });
-      document.getElementById('step-3-btn').addEventListener('click', () => {
-        if (currentProject.jsonPlan && Object.keys(currentProject.characterImages).length > 0) {
-          navigateToStep(3);
-        }
-      });
-
-      // Generate plan
-      document.getElementById('generate-plan-btn').addEventListener('click', async () => {
-        const storyInput = document.getElementById('story-input').value.trim();
-        const pageCount = parseInt(document.getElementById('page-count-input').value) || 4;
-        
-        if (!storyInput) {
-          alert('נא להזין סיפור');
-          return;
-        }
-        
-        showLoading('יוצר תוכנית קומיקס...');
-        
-        try {
-          const prompt = `צור תוכנית קומיקס מפורטת בהתבסס על הסיפור הבא:
-
-${storyInput}
-
-הנחיות:
-- צור בדיוק ${pageCount} עמודים
-- הגדר 1-4 דמויות מרכזיות עם תיאורים חזותיים מפורטים
-- כל עמוד צריך לכלול תיאור סצנה מפורט, הצעת קומפוזיציה, ודיאלוגים
-- בחר סגנון ציור מתאים לסיפור`;
-
-          const plan = await callPlannerModel(prompt, JSON_SCHEMA);
-          
-          currentProject.jsonPlan = plan;
-          currentProject.characterImages = {};
-          currentProject.generatedPages = [];
-          saveProject();
-          
-          navigateToStep(2);
-          renderStep2();
-          
-          // Auto-generate character images
-          await generateAllCharacters();
-          
-        } catch (error) {
-          alert('שגיאה ביצירת התוכנית: ' + error.message);
-        } finally {
-          hideLoading();
-        }
-      });
-
-      // Title/style changes
-      document.getElementById('comic-title-input').addEventListener('change', (e) => {
-        if (currentProject.jsonPlan) {
-          currentProject.jsonPlan.title = e.target.value;
-          saveProject();
-        }
-      });
-      
-      document.getElementById('global-style-input').addEventListener('change', (e) => {
-        if (currentProject.jsonPlan) {
-          currentProject.jsonPlan.globalStyle = e.target.value;
-          saveProject();
-        }
-      });
-
-      // Regenerate all characters
-      document.getElementById('regenerate-characters-btn').addEventListener('click', async () => {
-        if (confirm('האם לצור מחדש את כל תמונות הדמויות?')) {
-          currentProject.characterImages = {};
-          saveProject();
-          renderCharacters();
-          await generateAllCharacters();
-        }
-      });
-
-      // Add page
-      document.getElementById('add-page-btn').addEventListener('click', () => {
-        if (currentProject.jsonPlan?.pages) {
-          const newPageNum = currentProject.jsonPlan.pages.length + 1;
-          currentProject.jsonPlan.pages.push({
-            pageNumber: newPageNum,
-            sceneDescription: '',
-            compositionSuggestion: '',
-            suggestedEmotion: '',
-            dialogue: [],
-            narration: ''
-          });
-          saveProject();
-          renderPages();
-        }
-      });
-
-      // Improve plan
-      document.getElementById('improve-plan-btn').addEventListener('click', async () => {
-        showLoading('מבקש הצעות שיפור...');
-        
-        try {
-          const prompt = `קיבלת תוכנית קומיקס קיימת. אנא שפר אותה והוסף פרטים נוספים:
-
-${JSON.stringify(currentProject.jsonPlan, null, 2)}
-
-הנחיות לשיפור:
-- שפר את תיאורי הסצנות
-- הוסף דיאלוגים מעניינים יותר
-- הצע קומפוזיציות מרתקות יותר
-- שמור על המבנה הכללי אבל העשר את התוכן`;
-
-          const improvedPlan = await callPlannerModel(prompt, JSON_SCHEMA);
-          currentProject.jsonPlan = improvedPlan;
-          saveProject();
-          renderStep2();
-          
-        } catch (error) {
-          alert('שגיאה בקבלת הצעות שיפור: ' + error.message);
-        } finally {
-          hideLoading();
-        }
-      });
-
-      // Approve plan
-      document.getElementById('approve-plan-btn').addEventListener('click', () => {
-        const pages = currentProject.jsonPlan?.pages || [];
-        const keyCount = apiKeyPool.length;
-        
-        // Check if we have character images
-        if (Object.keys(currentProject.characterImages).length === 0) {
-          alert('יש ליצור תמונות ייחוס לדמויות לפני המשך');
-          return;
-        }
-        
-        // Check if we have enough keys (rough estimate: 1-2 calls per page)
-        const estimatedCalls = pages.length * 2;
-        if (keyCount < Math.ceil(estimatedCalls / 60)) { // Assuming ~60 calls per key per minute
-          showKeysModal();
-          return;
-        }
-        
-        navigateToStep(3);
-        generateComicPages();
-      });
-
-      // Edit modal
-      document.getElementById('apply-edit-btn').addEventListener('click', async () => {
-        const editPrompt = document.getElementById('edit-prompt-input').value.trim();
-        
-        if (!editPrompt) {
-          showError('edit-error', 'נא להזין הנחיית עריכה');
-          return;
-        }
-        
-        if (!editingTarget) return;
-        
-        showLoading('מבצע עריכה...');
-        hideError('edit-error');
-        
-        try {
-          let currentImage;
-          if (editingTarget.type === 'character') {
-            currentImage = currentProject.characterImages[editingTarget.name];
-          } else {
-            currentImage = currentProject.generatedPages[editingTarget.index];
-          }
-          
-          const newImage = await callArtistModel(editPrompt, currentImage);
-          
-          if (editingTarget.type === 'character') {
-            currentProject.characterImages[editingTarget.name] = newImage;
-            renderCharacters();
-          } else {
-            currentProject.generatedPages[editingTarget.index] = newImage;
-            renderGeneratedPages();
-          }
-          
-          saveProject();
-          closeEditModal();
-          
-        } catch (error) {
-          showError('edit-error', 'שגיאה בעריכת התמונה: ' + error.message);
-        } finally {
-          hideLoading();
-        }
-      });
-
-      // Keys management
-      document.getElementById('manage-keys-btn').addEventListener('click', showKeysModal);
-      
-      document.getElementById('add-backup-keys-btn').addEventListener('click', () => {
-        const keysInput = document.getElementById('backup-keys-input').value;
-        addApiKeys(keysInput);
-        document.getElementById('backup-keys-input').value = '';
-        renderKeysList();
-      });
-
-      // Clear storage
-      document.getElementById('clear-storage-btn').addEventListener('click', () => {
-        if (confirm('האם אתה בטוח? פעולה זו תמחק את כל הנתונים השמורים.')) {
-          const keys = apiKeyPool.slice(); // Keep keys
-          clearStorage();
-          apiKeyPool = keys;
-          saveToStorage('api_keys', apiKeyPool);
-          currentProject = {
-            jsonPlan: null,
-            characterImages: {},
-            generatedPages: []
-          };
-          navigateToStep(1);
-          document.getElementById('story-input').value = '';
-        }
-      });
-
-      // Logout
-      document.getElementById('logout-btn').addEventListener('click', () => {
-        if (confirm('האם להתנתק? המפתחות יישמרו.')) {
-          localStorage.removeItem('panalix_api_keys');
-          location.reload();
-        }
-      });
-
-      // Export buttons
-      document.getElementById('export-pdf-btn').addEventListener('click', () => {
-        alert('ייצוא ל-PDF: פונקציה זו תיושם בקרוב. התמונות נשמרות באחסון המקומי.');
-      });
-      
-      document.getElementById('export-cbz-btn').addEventListener('click', () => {
-        alert('ייצוא ל-CBZ: פונקציה זו תיושם בקרוב. התמונות נשמרות באחסון המקומי.');
-      });
-
-      document.getElementById('restart-btn').addEventListener('click', () => {
-        if (confirm('האם להתחיל פרויקט חדש?')) {
-          currentProject = {
-            jsonPlan: null,
-            characterImages: {},
-            generatedPages: []
-          };
-          saveProject();
-          navigateToStep(1);
-          document.getElementById('story-input').value = '';
-        }
-      });
-    }
-
-    // ====== INITIALIZATION ======
-    function showLoginScreen() {
-      document.getElementById('login-screen').classList.remove('hidden');
-      document.getElementById('main-app').classList.add('hidden');
-    }
-
-    function showMainApp() {
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('main-app').classList.remove('hidden');
-      updateKeyCountDisplay();
-      
-      // Load any saved project
-      loadProject();
-      if (currentProject.jsonPlan) {
-        updateStepButtonStates();
-      }
-    }
-
-    async function init() {
-      // Initialize Lucide icons
-      lucide.createIcons();
-      
-      // Setup event listeners
-      setupEventListeners();
-      
-      // Check for saved API keys
-      const savedKeys = loadFromStorage('api_keys');
-      if (savedKeys && savedKeys.length > 0) {
-        // Validate first key
-        showLoading('בודק מפתח API...');
-        const result = await validateApiKey(savedKeys[0]);
-        hideLoading();
-        
-        if (result.valid) {
-          apiKeyPool = savedKeys;
-          currentKeyIndex = 0;
-          showMainApp();
-        } else {
-          // Clear invalid keys
-          localStorage.removeItem('panalix_api_keys');
-          showLoginScreen();
-          showError('login-error', 'המפתח השמור אינו תקין יותר. נא להזין מפתח חדש.');
-        }
-      } else {
-        showLoginScreen();
-      }
-    }
-
-    // Start the app
-    init();
-  </script>
+    </script>
 </body>
 </html>
